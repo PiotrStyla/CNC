@@ -28,7 +28,8 @@ def validate_stl_file(file_path):
     if not file_path.lower().endswith('.stl'):
         return {'valid': False, 'message': "Not an STL file"}
 
-    if os.path.getsize(file_path) < 84:  # Minimum size for a valid STL file
+    file_size = os.path.getsize(file_path)
+    if file_size < 84:  # Minimum size for a valid STL file
         return {'valid': False, 'message': "File too small to be a valid STL"}
 
     try:
@@ -38,13 +39,36 @@ def validate_stl_file(file_path):
                 f.seek(80)
                 face_count = struct.unpack('<I', f.read(4))[0]
                 expected_size = 84 + face_count * 50
-                if os.path.getsize(file_path) != expected_size:
-                    return {'valid': False, 'message': "Invalid binary STL file size"}
+                if file_size != expected_size:
+                    return {'valid': False, 'message': f"Invalid binary STL file size. Expected {expected_size} bytes, got {file_size} bytes"}
+                
+                # Check for valid normals and vertices
+                for _ in range(face_count):
+                    normal = struct.unpack('<3f', f.read(12))
+                    for _ in range(3):  # 3 vertices per face
+                        vertex = struct.unpack('<3f', f.read(12))
+                    attr_byte_count = struct.unpack('<H', f.read(2))[0]
+                    if any(not -1 <= x <= 1 for x in normal) or any(not -1e6 <= x <= 1e6 for x in vertex):
+                        return {'valid': False, 'message': "Invalid normal or vertex values in binary STL"}
             else:
                 # ASCII STL validation
+                f.seek(0)
                 first_line = f.readline().strip().lower()
                 if not first_line.startswith(b'solid'):
-                    return {'valid': False, 'message': "Invalid ASCII STL file"}
+                    return {'valid': False, 'message': "Invalid ASCII STL file: doesn't start with 'solid'"}
+                
+                # Check for 'endsolid' at the end
+                f.seek(-80, 2)  # Go to last 80 bytes
+                last_80_bytes = f.read().lower()
+                if b'endsolid' not in last_80_bytes:
+                    return {'valid': False, 'message': "Invalid ASCII STL file: missing 'endsolid'"}
+                
+                # Check for valid facets
+                f.seek(0)
+                content = f.read().decode('utf-8', errors='ignore').lower()
+                if content.count('facet normal') != content.count('endfacet'):
+                    return {'valid': False, 'message': "Invalid ASCII STL file: mismatched facet count"}
+
     except Exception as e:
         return {'valid': False, 'message': f"Error validating STL file: {str(e)}"}
 
@@ -97,3 +121,25 @@ def process_cad_file(filename):
     except Exception as e:
         logging.error(f"Error processing CAD file: {str(e)}", exc_info=True)
         return {'error': f'An unexpected error occurred: {str(e)}'}
+
+def repair_stl_file(file_path):
+    try:
+        # Load the STL file
+        original_mesh = mesh.Mesh.from_file(file_path)
+
+        # Remove duplicate vertices
+        vertices, indices = np.unique(original_mesh.vectors.reshape([-1, 3]), axis=0, return_inverse=True)
+        faces = indices.reshape([-1, 3])
+
+        # Create a new mesh with cleaned data
+        repaired_mesh = mesh.Mesh(np.zeros(faces.shape[0], dtype=mesh.Mesh.dtype))
+        for i, f in enumerate(faces):
+            repaired_mesh.vectors[i] = vertices[f]
+
+        # Save the repaired mesh
+        repaired_file_path = file_path.replace('.stl', '_repaired.stl')
+        repaired_mesh.save(repaired_file_path)
+
+        return {'success': True, 'message': "STL file repaired successfully", 'repaired_file': repaired_file_path}
+    except Exception as e:
+        return {'success': False, 'message': f"Failed to repair STL file: {str(e)}"}

@@ -40,7 +40,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (flashMessages.length > 0) {
                     flashMessages.forEach(message => {
                         const messageText = message.textContent.trim();
-                        const messageType = message.classList.contains('alert-success') ? 'success' : 'error';
+                        const messageType = message.classList.contains('alert-success') ? 'success' : 
+                                            message.classList.contains('alert-warning') ? 'warning' : 'error';
                         showFeedback(messageText, messageType);
                     });
                 } else {
@@ -50,7 +51,7 @@ document.addEventListener('DOMContentLoaded', function() {
             })
             .catch(error => {
                 console.error('Error:', error);
-                showFeedback('An error occurred while uploading the file.', 'error');
+                showFeedback('An error occurred while uploading the file. Please try again.', 'error');
             })
             .finally(() => {
                 uploadButton.disabled = false;
@@ -112,9 +113,13 @@ document.addEventListener('DOMContentLoaded', function() {
                     animate();
                 } else {
                     console.error('Invalid model data received');
+                    showFeedback('Error loading 3D model. Please try uploading the file again.', 'error');
                 }
             })
-            .catch(error => console.error('Error loading 3D model:', error));
+            .catch(error => {
+                console.error('Error loading 3D model:', error);
+                showFeedback('Error loading 3D model. Please try uploading the file again.', 'error');
+            });
 
         // Handle window resize
         window.addEventListener('resize', function() {

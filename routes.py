@@ -3,7 +3,7 @@ from flask import render_template, request, redirect, url_for, flash, jsonify
 from werkzeug.utils import secure_filename
 from app import app, db
 from models import User, Order
-from utils import allowed_file, process_cad_file, validate_stl_file
+from utils import allowed_file, process_cad_file, validate_stl_file, repair_stl_file
 import logging
 
 logging.basicConfig(level=logging.DEBUG)
@@ -17,7 +17,7 @@ def upload():
     if request.method == 'POST':
         if 'technical_drawing' not in request.files:
             flash('No file part', 'error')
-            logging.error("File upload failed: No file part")
+            logging.error("File upload failed: No file part in request")
             return redirect(request.url)
         file = request.files['technical_drawing']
         if file.filename == '':
@@ -35,13 +35,22 @@ def upload():
                 # Validate STL file
                 validation_result = validate_stl_file(file_path)
                 if not validation_result['valid']:
-                    os.remove(file_path)
-                    flash(f"Invalid or corrupted STL file: {validation_result['message']}", 'error')
-                    logging.error(f"STL file validation failed: {validation_result['message']}")
-                    return redirect(request.url)
+                    logging.warning(f"STL file validation failed: {validation_result['message']}")
+                    
+                    # Attempt to repair the file
+                    repair_result = repair_stl_file(file_path)
+                    if repair_result['success']:
+                        file_path = repair_result['repaired_file']
+                        flash(f"File was repaired: {repair_result['message']}", 'warning')
+                        logging.info(f"STL file repaired: {file_path}")
+                    else:
+                        os.remove(file_path)
+                        flash(f"Invalid or corrupted STL file: {validation_result['message']}", 'error')
+                        logging.error(f"STL file validation failed and repair unsuccessful: {validation_result['message']}")
+                        return redirect(request.url)
                 
                 # Process CAD file and generate 3D model
-                model_data = process_cad_file(filename)
+                model_data = process_cad_file(os.path.basename(file_path))
                 if model_data is None or 'error' in model_data:
                     error_message = model_data.get('error', 'Error processing the uploaded file')
                     logging.error(f"Error processing the uploaded file: {filename}. Error: {error_message}")
@@ -49,7 +58,7 @@ def upload():
                     return redirect(request.url)
                 
                 # Create a new order
-                order = Order(technical_drawing=filename)
+                order = Order(technical_drawing=os.path.basename(file_path))
                 db.session.add(order)
                 db.session.commit()
                 logging.info(f"New order created with ID: {order.id}")
