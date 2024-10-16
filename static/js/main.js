@@ -82,71 +82,83 @@ document.addEventListener('DOMContentLoaded', function() {
     // 3D Visualization
     const canvas = document.getElementById('3d-preview');
     if (canvas) {
-        const scene = new THREE.Scene();
-        const camera = new THREE.PerspectiveCamera(75, canvas.clientWidth / canvas.clientHeight, 0.1, 1000);
-        const renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
+        let scene, camera, renderer, mesh;
 
-        renderer.setSize(canvas.clientWidth, canvas.clientHeight);
+        function initScene() {
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(75, canvas.clientWidth / canvas.clientHeight, 0.1, 1000);
+            renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
 
-        // Add lights
-        const ambientLight = new THREE.AmbientLight(0x404040);
-        scene.add(ambientLight);
-        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
-        directionalLight.position.set(1, 1, 1);
-        scene.add(directionalLight);
+            renderer.setSize(canvas.clientWidth, canvas.clientHeight);
 
-        // Load the 3D model
-        const loader = new THREE.BufferGeometryLoader();
-        fetch('/get_model_data')
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                return response.json();
-            })
-            .then(data => {
-                if (data.vertices && data.faces) {
-                    const geometry = new THREE.BufferGeometry();
-                    geometry.setAttribute('position', new THREE.Float32BufferAttribute(data.vertices.flat(), 3));
-                    geometry.setIndex(data.faces.flat());
-                    geometry.computeVertexNormals();
+            // Add lights
+            const ambientLight = new THREE.AmbientLight(0x404040);
+            scene.add(ambientLight);
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
+            directionalLight.position.set(1, 1, 1);
+            scene.add(directionalLight);
 
-                    const material = new THREE.MeshPhongMaterial({ color: 0x00ff00, wireframe: false });
-                    const mesh = new THREE.Mesh(geometry, material);
+            // Adjust camera position
+            camera.position.z = 10;
+        }
 
-                    // Center and scale the model
-                    mesh.position.set(-data.center[0], -data.center[1], -data.center[2]);
-                    const scale = 5 / Math.max(...data.size);
-                    mesh.scale.set(scale, scale, scale);
-
-                    scene.add(mesh);
-
-                    // Adjust camera position
-                    camera.position.z = 10;
-
-                    function animate() {
-                        requestAnimationFrame(animate);
-                        mesh.rotation.x += 0.01;
-                        mesh.rotation.y += 0.01;
-                        renderer.render(scene, camera);
+        function loadModel() {
+            fetch('/get_model_data')
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
                     }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.vertices && data.faces) {
+                        const geometry = new THREE.BufferGeometry();
+                        geometry.setAttribute('position', new THREE.Float32BufferAttribute(data.vertices.flat(), 3));
+                        geometry.setIndex(data.faces.flat());
+                        geometry.computeVertexNormals();
 
-                    animate();
-                } else {
-                    console.error('Invalid model data received');
+                        const material = new THREE.MeshPhongMaterial({ color: 0x00ff00, wireframe: false });
+                        mesh = new THREE.Mesh(geometry, material);
+
+                        // Center and scale the model
+                        mesh.position.set(-data.center[0], -data.center[1], -data.center[2]);
+                        const scale = 5 / Math.max(...data.size);
+                        mesh.scale.set(scale, scale, scale);
+
+                        scene.add(mesh);
+
+                        // Start animation
+                        animate();
+                    } else {
+                        throw new Error('Invalid model data received');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading 3D model:', error);
                     showFeedback('Error loading 3D model. Please try uploading the file again.', 'error');
-                }
-            })
-            .catch(error => {
-                console.error('Error loading 3D model:', error);
-                showFeedback('Error loading 3D model. Please try uploading the file again.', 'error');
-            });
+                });
+        }
 
-        // Handle window resize
-        window.addEventListener('resize', function() {
+        function animate() {
+            requestAnimationFrame(animate);
+            if (mesh) {
+                mesh.rotation.x += 0.01;
+                mesh.rotation.y += 0.01;
+            }
+            renderer.render(scene, camera);
+        }
+
+        function handleResize() {
             camera.aspect = canvas.clientWidth / canvas.clientHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(canvas.clientWidth, canvas.clientHeight);
-        });
+        }
+
+        // Initialize and load
+        initScene();
+        loadModel();
+
+        // Handle window resize
+        window.addEventListener('resize', handleResize);
     }
 });
