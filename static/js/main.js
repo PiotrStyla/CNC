@@ -94,6 +94,7 @@ function initializeVisualization() {
     console.log('initializeVisualization function called');
     const canvas = document.getElementById('3d-preview');
     const imagePreview = document.getElementById('image-preview');
+    const loadingIndicator = document.getElementById('loading-indicator');
     if (canvas) {
         console.log('Canvas found, dimensions:', canvas.clientWidth, 'x', canvas.clientHeight);
         let scene, camera, renderer, mesh, controls;
@@ -134,6 +135,8 @@ function initializeVisualization() {
             console.log('Current URL:', currentUrl);
             console.log('Order ID:', orderId);
             
+            if (loadingIndicator) loadingIndicator.style.display = 'block';
+
             fetch(`/get_model_data/${orderId}`)
                 .then(response => { 
                     console.log('Response status:', response.status); 
@@ -154,6 +157,9 @@ function initializeVisualization() {
                 .catch(error => {
                     console.error('Error loading model:', error);
                     showFeedback('Error loading model. Please try uploading the file again.', 'error');
+                })
+                .finally(() => {
+                    if (loadingIndicator) loadingIndicator.style.display = 'none';
                 });
         }
 
@@ -233,6 +239,7 @@ function initializeVisualization() {
         window.addEventListener('resize', handleResize);
     } else {
         console.error('3D preview canvas not found');
+        showFeedback('Error: 3D preview canvas not found', 'error');
     }
 }
 

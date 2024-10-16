@@ -81,9 +81,11 @@ def get_model_data(order_id):
         file_extension = os.path.splitext(order.technical_drawing)[1].lower()
 
         if file_extension in ['.stl', '.obj', '.step', '.stp']:
+            logging.info(f"Processing 3D file: {order.technical_drawing}")
             model_data = process_cad_file(order.technical_drawing)
             if model_data:
                 logging.info(f"3D model data processed for order_id: {order_id}")
+                logging.debug(f"Model data: {model_data}")
                 return jsonify(model_data)
             else:
                 logging.error(f"Error processing 3D model data for order_id: {order_id}")
