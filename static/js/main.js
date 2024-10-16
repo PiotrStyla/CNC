@@ -83,16 +83,17 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Check if we're on the visualization page
     if (document.getElementById('3d-preview')) {
-        console.log('Initializing 3D preview');
+        console.log('Initializing visualization');
         initializeVisualization();
     } else {
-        console.log('Not on visualization page, skipping 3D preview initialization');
+        console.log('Not on visualization page, skipping visualization initialization');
     }
 });
 
 function initializeVisualization() {
     console.log('initializeVisualization function called');
     const canvas = document.getElementById('3d-preview');
+    const imagePreview = document.getElementById('image-preview');
     if (canvas) {
         console.log('Canvas found, dimensions:', canvas.clientWidth, 'x', canvas.clientHeight);
         let scene, camera, renderer, mesh, controls;
@@ -123,13 +124,7 @@ function initializeVisualization() {
             controls.dampingFactor = 0.25;
             controls.enableZoom = true;
 
-            // Add a simple cube to verify rendering
-            const geometry = new THREE.BoxGeometry(1, 1, 1);
-            const material = new THREE.MeshPhongMaterial({ color: 0x00ff00, wireframe: true });
-            const cube = new THREE.Mesh(geometry, material);
-            scene.add(cube);
-
-            console.log('Scene initialized with cube');
+            console.log('Scene initialized');
         }
 
         function loadModel() {
@@ -146,53 +141,71 @@ function initializeVisualization() {
                 })
                 .then(data => {
                     console.log('Model data received:', data);
-                    if (data.vertices && data.faces) {
-                        console.log('Vertices:', data.vertices.length, 'Faces:', data.faces.length);
-                        const geometry = new THREE.BufferGeometry();
-                        geometry.setAttribute('position', new THREE.Float32BufferAttribute(data.vertices.flat(), 3));
-                        geometry.setIndex(data.faces.flat());
-                        geometry.computeVertexNormals();
-
-                        const material = new THREE.MeshPhongMaterial({ color: 0x00ff00, wireframe: false });
-                        mesh = new THREE.Mesh(geometry, material);
-
-                        // Center and scale the model
-                        mesh.position.set(-data.center[0], -data.center[1], -data.center[2]);
-                        const scale = 5 / Math.max(...data.size);
-                        mesh.scale.set(scale, scale, scale);
-
-                        scene.add(mesh);
-                        console.log('Model added to scene');
-
-                        // Adjust camera to fit the model
-                        const boundingBox = new THREE.Box3().setFromObject(mesh);
-                        const center = boundingBox.getCenter(new THREE.Vector3());
-                        const size = boundingBox.getSize(new THREE.Vector3());
-                        console.log('Model size:', size);
-
-                        const maxDim = Math.max(size.x, size.y, size.z);
-                        const fov = camera.fov * (Math.PI / 180);
-                        let cameraZ = Math.abs(maxDim / 2 / Math.tan(fov / 2));
-
-                        camera.position.z = cameraZ * 1.5; // Add some padding
-                        camera.updateProjectionMatrix();
-
-                        controls.target.copy(center);
-                        controls.update();
+                    if (data.type === 'image') {
+                        // Handle 2D image
+                        displayImage(data.filename);
+                    } else if (data.vertices && data.faces) {
+                        // Handle 3D model
+                        display3DModel(data);
                     } else {
-                        console.error('Invalid model data received:', data);
                         throw new Error('Invalid model data received');
                     }
                 })
                 .catch(error => {
-                    console.error('Error loading 3D model:', error);
-                    showFeedback('Error loading 3D model. Please try uploading the file again.', 'error');
+                    console.error('Error loading model:', error);
+                    showFeedback('Error loading model. Please try uploading the file again.', 'error');
                 });
+        }
+
+        function displayImage(filename) {
+            console.log('Displaying 2D image:', filename);
+            canvas.style.display = 'none';
+            imagePreview.style.display = 'block';
+            imagePreview.src = `/static/uploads/${filename}`;
+            imagePreview.alt = 'Uploaded Image';
+        }
+
+        function display3DModel(data) {
+            console.log('Displaying 3D model');
+            canvas.style.display = 'block';
+            imagePreview.style.display = 'none';
+
+            const geometry = new THREE.BufferGeometry();
+            geometry.setAttribute('position', new THREE.Float32BufferAttribute(data.vertices.flat(), 3));
+            geometry.setIndex(data.faces.flat());
+            geometry.computeVertexNormals();
+
+            const material = new THREE.MeshPhongMaterial({ color: 0x00ff00, wireframe: false });
+            mesh = new THREE.Mesh(geometry, material);
+
+            // Center and scale the model
+            mesh.position.set(-data.center[0], -data.center[1], -data.center[2]);
+            const scale = 5 / Math.max(...data.size);
+            mesh.scale.set(scale, scale, scale);
+
+            scene.add(mesh);
+            console.log('Model added to scene');
+
+            // Adjust camera to fit the model
+            const boundingBox = new THREE.Box3().setFromObject(mesh);
+            const center = boundingBox.getCenter(new THREE.Vector3());
+            const size = boundingBox.getSize(new THREE.Vector3());
+            console.log('Model size:', size);
+
+            const maxDim = Math.max(size.x, size.y, size.z);
+            const fov = camera.fov * (Math.PI / 180);
+            let cameraZ = Math.abs(maxDim / 2 / Math.tan(fov / 2));
+
+            camera.position.z = cameraZ * 1.5; // Add some padding
+            camera.updateProjectionMatrix();
+
+            controls.target.copy(center);
+            controls.update();
         }
 
         function animate() {
             requestAnimationFrame(animate);
-            controls.update();
+            if (controls) controls.update();
             if (mesh) mesh.rotation.y += 0.01;
             if (renderer && scene && camera) {
                 renderer.render(scene, camera);
@@ -203,10 +216,12 @@ function initializeVisualization() {
 
         function handleResize() {
             console.log('Window resized');
-            camera.aspect = canvas.clientWidth / canvas.clientHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(canvas.clientWidth, canvas.clientHeight);
-            console.log('New renderer size:', renderer.getSize(new THREE.Vector2()));
+            if (camera && renderer) {
+                camera.aspect = canvas.clientWidth / canvas.clientHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(canvas.clientWidth, canvas.clientHeight);
+                console.log('New renderer size:', renderer.getSize(new THREE.Vector2()));
+            }
         }
 
         // Initialize and load

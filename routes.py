@@ -32,30 +32,23 @@ def upload():
                 file.save(file_path)
                 logging.info(f"File saved successfully: {file_path}")
                 
-                # Validate STL file
-                validation_result = validate_stl_file(file_path)
-                if not validation_result['valid']:
-                    logging.warning(f"STL file validation failed: {validation_result['message']}")
-                    
-                    # Attempt to repair the file
-                    repair_result = repair_stl_file(file_path)
-                    if repair_result['success']:
-                        file_path = repair_result['repaired_file']
-                        flash(f"File was repaired: {repair_result['message']}", 'warning')
-                        logging.info(f"STL file repaired: {file_path}")
-                    else:
-                        os.remove(file_path)
-                        flash(f"Invalid or corrupted STL file: {validation_result['message']}", 'error')
-                        logging.error(f"STL file validation failed and repair unsuccessful: {validation_result['message']}")
-                        return redirect(request.url)
-                
-                # Process CAD file and generate 3D model
-                model_data = process_cad_file(os.path.basename(file_path))
-                if model_data is None or 'error' in model_data:
-                    error_message = model_data.get('error', 'Error processing the uploaded file')
-                    logging.error(f"Error processing the uploaded file: {filename}. Error: {error_message}")
-                    flash(error_message, 'error')
-                    return redirect(request.url)
+                if filename.lower().endswith('.stl'):
+                    # Validate STL file
+                    validation_result = validate_stl_file(file_path)
+                    if not validation_result['valid']:
+                        logging.warning(f"STL file validation failed: {validation_result['message']}")
+                        
+                        # Attempt to repair the file
+                        repair_result = repair_stl_file(file_path)
+                        if repair_result['success']:
+                            file_path = repair_result['repaired_file']
+                            flash(f"File was repaired: {repair_result['message']}", 'warning')
+                            logging.info(f"STL file repaired: {file_path}")
+                        else:
+                            os.remove(file_path)
+                            flash(f"Invalid or corrupted STL file: {validation_result['message']}", 'error')
+                            logging.error(f"STL file validation failed and repair unsuccessful: {validation_result['message']}")
+                            return redirect(request.url)
                 
                 # Create a new order without specifying user_id
                 order = Order(technical_drawing=os.path.basename(file_path))
@@ -71,7 +64,7 @@ def upload():
                 return redirect(request.url)
         else:
             logging.warning(f"Invalid file type: {file.filename}")
-            flash('Invalid file type. Please upload a supported file format (STL, OBJ, STEP, STP).', 'error')
+            flash('Invalid file type. Please upload a supported file format (STL, OBJ, STEP, STP, JPG, JPEG, PNG, GIF).', 'error')
     return render_template('upload.html')
 
 @app.route('/visualization/<int:order_id>')
@@ -84,13 +77,26 @@ def get_model_data(order_id):
     logging.info(f"get_model_data called for order_id: {order_id}")
     order = Order.query.get_or_404(order_id)
     if order:
-        model_data = process_cad_file(order.technical_drawing)
-        if model_data:
-            logging.info(f"Model data processed for order_id: {order_id}")
-            return jsonify(model_data)
+        file_path = os.path.join(app.config['UPLOAD_FOLDER'], order.technical_drawing)
+        file_extension = os.path.splitext(order.technical_drawing)[1].lower()
+
+        if file_extension in ['.stl', '.obj', '.step', '.stp']:
+            model_data = process_cad_file(order.technical_drawing)
+            if model_data:
+                logging.info(f"3D model data processed for order_id: {order_id}")
+                return jsonify(model_data)
+            else:
+                logging.error(f"Error processing 3D model data for order_id: {order_id}")
+                return jsonify({'error': 'Error processing 3D model data'}), 500
+        elif file_extension in ['.jpg', '.jpeg', '.png', '.gif']:
+            logging.info(f"2D image file detected for order_id: {order_id}")
+            return jsonify({
+                'type': 'image',
+                'filename': order.technical_drawing
+            })
         else:
-            logging.error(f"Error processing model data for order_id: {order_id}")
-            return jsonify({'error': 'Error processing model data'}), 500
+            logging.error(f"Unsupported file type for order_id: {order_id}")
+            return jsonify({'error': 'Unsupported file type'}), 400
     logging.error(f"Order not found for order_id: {order_id}")
     return jsonify({'error': 'Order not found'}), 404
 

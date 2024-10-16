@@ -1,11 +1,12 @@
 {% extends "base.html" %}
 
 {% block content %}
-<h1 class="mb-4">3D Visualization</h1>
+<h1 class="mb-4">File Visualization</h1>
 <div class="row">
     <div class="col-md-8">
-        <div id="canvas-container">
-            <canvas id="3d-preview"></canvas>
+        <div id="visualization-container">
+            <canvas id="3d-preview" style="display: none;"></canvas>
+            <img id="image-preview" style="display: none; max-width: 100%; height: auto;" alt="Uploaded Image">
         </div>
     </div>
     <div class="col-md-4">
@@ -60,19 +61,20 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        const canvasContainer = document.getElementById('canvas-container');
+        const visualizationContainer = document.getElementById('visualization-container');
         const canvas = document.getElementById('3d-preview');
+        const imagePreview = document.getElementById('image-preview');
         
-        if (canvas && canvasContainer) {
-            canvas.width = canvasContainer.clientWidth;
-            canvas.height = 400; // Set a fixed height or use a responsive approach
+        if (visualizationContainer && canvas && imagePreview) {
+            visualizationContainer.style.width = '100%';
+            visualizationContainer.style.height = '400px';
             
-            console.log('Canvas dimensions:', canvas.width, 'x', canvas.height);
+            canvas.width = visualizationContainer.clientWidth;
+            canvas.height = visualizationContainer.clientHeight;
             
-            // Your Three.js initialization code here
-            // ...
+            console.log('Visualization container dimensions:', visualizationContainer.clientWidth, 'x', visualizationContainer.clientHeight);
         } else {
-            console.error('Canvas or container not found');
+            console.error('Visualization elements not found');
         }
     });
 </script>
