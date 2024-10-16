@@ -3,7 +3,7 @@ from flask import render_template, request, redirect, url_for, flash, jsonify
 from werkzeug.utils import secure_filename
 from app import app, db
 from models import User, Order
-from utils import allowed_file, process_cad_file
+from utils import allowed_file, process_cad_file, validate_stl_file
 import logging
 
 logging.basicConfig(level=logging.DEBUG)
@@ -30,11 +30,17 @@ def upload():
                 file.save(file_path)
                 logging.info(f"File saved successfully: {file_path}")
                 
+                # Validate STL file
+                if not validate_stl_file(file_path):
+                    os.remove(file_path)
+                    flash('Invalid or corrupted STL file. Please check your file and try again.', 'error')
+                    return redirect(request.url)
+                
                 # Process CAD file and generate 3D model
                 model_data = process_cad_file(filename)
                 if model_data is None or 'error' in model_data:
                     error_message = model_data.get('error', 'Error processing the uploaded file')
-                    logging.error(f"Error processing the uploaded file: {filename}")
+                    logging.error(f"Error processing the uploaded file: {filename}. Error: {error_message}")
                     flash(error_message, 'error')
                     return redirect(request.url)
                 
@@ -47,7 +53,7 @@ def upload():
                 flash('File uploaded and processed successfully', 'success')
                 return redirect(url_for('visualization', order_id=order.id))
             except Exception as e:
-                logging.error(f"Error uploading file: {str(e)}")
+                logging.error(f"Error uploading file: {str(e)}", exc_info=True)
                 flash(f'Error uploading file: {str(e)}', 'error')
                 return redirect(request.url)
         else:

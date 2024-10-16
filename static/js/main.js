@@ -1,12 +1,65 @@
 document.addEventListener('DOMContentLoaded', function() {
     const fileInput = document.getElementById('technical_drawing');
     const fileLabel = document.querySelector('.custom-file-label');
+    const uploadForm = document.querySelector('form');
+    const uploadButton = document.querySelector('button[type="submit"]');
+    const feedbackDiv = document.createElement('div');
+    feedbackDiv.className = 'mt-3';
+    uploadForm.appendChild(feedbackDiv);
 
     if (fileInput) {
         fileInput.addEventListener('change', function(e) {
             let fileName = e.target.files[0].name;
             fileLabel.textContent = fileName;
         });
+    }
+
+    if (uploadForm) {
+        uploadForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            if (!fileInput.files[0]) {
+                showFeedback('Please select a file to upload.', 'warning');
+                return;
+            }
+
+            const formData = new FormData(uploadForm);
+            uploadButton.disabled = true;
+            showFeedback('Uploading file...', 'info');
+
+            fetch('/upload', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.text())
+            .then(html => {
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                const flashMessages = doc.querySelectorAll('.alert');
+                
+                if (flashMessages.length > 0) {
+                    flashMessages.forEach(message => {
+                        const messageText = message.textContent.trim();
+                        const messageType = message.classList.contains('alert-success') ? 'success' : 'error';
+                        showFeedback(messageText, messageType);
+                    });
+                } else {
+                    // If no flash messages, assume success and redirect
+                    window.location.href = response.url;
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showFeedback('An error occurred while uploading the file.', 'error');
+            })
+            .finally(() => {
+                uploadButton.disabled = false;
+            });
+        });
+    }
+
+    function showFeedback(message, type) {
+        feedbackDiv.innerHTML = `<div class="alert alert-${type}" role="alert">${message}</div>`;
     }
 
     // 3D Visualization

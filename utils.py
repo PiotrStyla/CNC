@@ -34,6 +34,26 @@ def validate_stl_file(file_path):
         logging.error(f"File too small to be a valid STL: {file_path}")
         return False
 
+    try:
+        with open(file_path, 'rb') as f:
+            if is_binary_stl(file_path):
+                # Binary STL validation
+                f.seek(80)
+                face_count = struct.unpack('<I', f.read(4))[0]
+                expected_size = 84 + face_count * 50
+                if os.path.getsize(file_path) != expected_size:
+                    logging.error(f"Invalid binary STL file size: {file_path}")
+                    return False
+            else:
+                # ASCII STL validation
+                first_line = f.readline().strip().lower()
+                if not first_line.startswith(b'solid'):
+                    logging.error(f"Invalid ASCII STL file: {file_path}")
+                    return False
+    except Exception as e:
+        logging.error(f"Error validating STL file: {file_path}. Error: {str(e)}")
+        return False
+
     return True
 
 def process_cad_file(filename):
@@ -43,13 +63,9 @@ def process_cad_file(filename):
             logging.info(f"Processing STL file: {filename}")
 
             if not validate_stl_file(file_path):
-                return None
+                return {'error': 'Invalid or corrupted STL file'}
 
             try:
-                # Determine if the file is binary or ASCII STL
-                is_binary = is_binary_stl(file_path)
-                logging.info(f"STL file type: {'Binary' if is_binary else 'ASCII'}")
-
                 # Load the STL file
                 stl_mesh = mesh.Mesh.from_file(file_path)
 
@@ -84,5 +100,5 @@ def process_cad_file(filename):
                 'type': filename.rsplit('.', 1)[1].lower()
             }
     except Exception as e:
-        logging.error(f"Error processing CAD file: {str(e)}")
+        logging.error(f"Error processing CAD file: {str(e)}", exc_info=True)
         return {'error': f'An unexpected error occurred: {str(e)}'}
