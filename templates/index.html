@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1 class="mb-4">Welcome to CNC Machining Company</h1>
+<div class="row">
+    <div class="col-md-6">
+        <h2>About Us</h2>
+        <p>We are a leading CNC machining company specializing in high-precision manufacturing solutions. With state-of-the-art equipment and expert technicians, we deliver top-quality parts for various industries.</p>
+    </div>
+    <div class="col-md-6">
+        <h2>Our Services</h2>
+        <ul>
+            <li>CNC Milling</li>
+            <li>CNC Turning</li>
+            <li>Prototyping</li>
+            <li>Small to Medium Production Runs</li>
+        </ul>
+    </div>
+</div>
+<div class="row mt-4">
+    <div class="col-md-12">
+        <h2>Contact Us</h2>
+        <p>For inquiries or to request a quote, please contact us:</p>
+        <ul>
+            <li>Email: info@cncmachining.com</li>
+            <li>Phone: (555) 123-4567</li>
+            <li>Address: 123 Manufacturing St, Industryville, IN 12345</li>
+        </ul>
+    </div>
+</div>
+<div class="row mt-4">
+    <div class="col-md-12">
+        <a href="{{ url_for('upload') }}" class="btn btn-primary">Upload Technical Drawing</a>
+    </div>
+</div>
+{% endblock %}

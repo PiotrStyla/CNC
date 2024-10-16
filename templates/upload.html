@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1 class="mb-4">Upload Technical Drawing</h1>
+<form method="POST" enctype="multipart/form-data">
+    <div class="mb-3">
+        <label for="technical_drawing" class="form-label">Technical Drawing</label>
+        <div class="custom-file">
+            <input type="file" class="custom-file-input" id="technical_drawing" name="technical_drawing" required>
+            <label class="custom-file-label" for="technical_drawing">Choose file</label>
+        </div>
+        <small class="form-text text-muted">Supported formats: STL, OBJ, STEP, STP</small>
+    </div>
+    <button type="submit" class="btn btn-primary">Upload</button>
+</form>
+{% endblock %}

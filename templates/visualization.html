@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1 class="mb-4">3D Visualization</h1>
+<div class="row">
+    <div class="col-md-8">
+        <canvas id="3d-preview"></canvas>
+    </div>
+    <div class="col-md-4">
+        <h2>Order Details</h2>
+        <p><strong>Order ID:</strong> {{ order.id }}</p>
+        <p><strong>Status:</strong> {{ order.status }}</p>
+        <p><strong>Created:</strong> {{ order.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</p>
+        
+        <h3 class="mt-4">Comments</h3>
+        <div class="comments mb-3">
+            {% if order.comments %}
+                <p>{{ order.comments|nl2br }}</p>
+            {% else %}
+                <p>No comments yet.</p>
+            {% endif %}
+        </div>
+        <form method="POST" action="{{ url_for('add_comment', order_id=order.id) }}">
+            <div class="mb-3">
+                <label for="comment" class="form-label">Add a comment</label>
+                <textarea class="form-control" id="comment" name="comment" rows="3" required></textarea>
+            </div>
+            <button type="submit" class="btn btn-secondary">Add Comment</button>
+        </form>
+
+        <h3 class="mt-4">Additional Files</h3>
+        <div class="additional-files mb-3">
+            {% if order.additional_files %}
+                {% for file in order.additional_files.split(',') %}
+                    <p><a href="{{ url_for('static', filename='uploads/' + file) }}" target="_blank">{{ file }}</a></p>
+                {% endfor %}
+            {% else %}
+                <p>No additional files uploaded.</p>
+            {% endif %}
+        </div>
+        <form method="POST" action="{{ url_for('upload_additional_file', order_id=order.id) }}" enctype="multipart/form-data">
+            <div class="mb-3">
+                <label for="additional_file" class="form-label">Upload additional file</label>
+                <input type="file" class="form-control" id="additional_file" name="additional_file" required>
+            </div>
+            <button type="submit" class="btn btn-secondary">Upload File</button>
+        </form>
+    </div>
+</div>
+{% endblock %}
