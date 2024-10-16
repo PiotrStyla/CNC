@@ -5,7 +5,10 @@ document.addEventListener('DOMContentLoaded', function() {
     const uploadButton = document.querySelector('button[type="submit"]');
     const feedbackDiv = document.createElement('div');
     feedbackDiv.className = 'mt-3';
-    uploadForm.appendChild(feedbackDiv);
+    
+    if (uploadForm) {
+        uploadForm.appendChild(feedbackDiv);
+    }
 
     if (fileInput) {
         fileInput.addEventListener('change', function(e) {
@@ -68,21 +71,17 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    function showFeedback(message, type) {
-        feedbackDiv.innerHTML = `<div class="alert alert-${type}" role="alert">${message}</div>`;
+    // Check if we're on the visualization page
+    if (document.getElementById('3d-preview')) {
+        console.log('Initializing 3D preview');
+        initializeVisualization();
     }
+});
 
-    function getOrderIdFromHtml(html) {
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(html, 'text/html');
-        const orderIdElement = doc.querySelector('[data-order-id]');
-        return orderIdElement ? orderIdElement.dataset.orderId : null;
-    }
-
-    // 3D Visualization
+function initializeVisualization() {
     const canvas = document.getElementById('3d-preview');
     if (canvas) {
-        let scene, camera, renderer, mesh;
+        let scene, camera, renderer, mesh, controls;
 
         function initScene() {
             scene = new THREE.Scene();
@@ -99,7 +98,19 @@ document.addEventListener('DOMContentLoaded', function() {
             scene.add(directionalLight);
 
             // Adjust camera position
-            camera.position.z = 10;
+            camera.position.z = 5;
+
+            // Add OrbitControls
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.25;
+            controls.enableZoom = true;
+
+            // Add a simple cube to verify rendering
+            const geometry = new THREE.BoxGeometry(1, 1, 1);
+            const material = new THREE.MeshPhongMaterial({ color: 0x00ff00 });
+            const cube = new THREE.Mesh(geometry, material);
+            scene.add(cube);
 
             console.log('Scene initialized');
         }
@@ -132,8 +143,20 @@ document.addEventListener('DOMContentLoaded', function() {
                         scene.add(mesh);
                         console.log('Model added to scene');
 
-                        // Start animation
-                        animate();
+                        // Adjust camera to fit the model
+                        const boundingBox = new THREE.Box3().setFromObject(mesh);
+                        const center = boundingBox.getCenter(new THREE.Vector3());
+                        const size = boundingBox.getSize(new THREE.Vector3());
+
+                        const maxDim = Math.max(size.x, size.y, size.z);
+                        const fov = camera.fov * (Math.PI / 180);
+                        let cameraZ = Math.abs(maxDim / 2 / Math.tan(fov / 2));
+
+                        camera.position.z = cameraZ * 1.5; // Add some padding
+                        camera.updateProjectionMatrix();
+
+                        controls.target.copy(center);
+                        controls.update();
                     } else {
                         throw new Error('Invalid model data received');
                     }
@@ -146,10 +169,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         function animate() {
             requestAnimationFrame(animate);
-            if (mesh) {
-                mesh.rotation.x += 0.01;
-                mesh.rotation.y += 0.01;
-            }
+            controls.update();
             renderer.render(scene, camera);
         }
 
@@ -162,13 +182,29 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         // Initialize and load
-        console.log('Initializing 3D preview');
         initScene();
         loadModel();
+        animate();
 
         // Handle window resize
         window.addEventListener('resize', handleResize);
     } else {
         console.error('3D preview canvas not found');
     }
-});
+}
+
+function showFeedback(message, type) {
+    const feedbackDiv = document.querySelector('.feedback');
+    if (feedbackDiv) {
+        feedbackDiv.innerHTML = `<div class="alert alert-${type}" role="alert">${message}</div>`;
+    } else {
+        console.error('Feedback div not found');
+    }
+}
+
+function getOrderIdFromHtml(html) {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, 'text/html');
+    const orderIdElement = doc.querySelector('[data-order-id]');
+    return orderIdElement ? orderIdElement.dataset.orderId : null;
+}

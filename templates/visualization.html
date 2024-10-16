@@ -4,7 +4,9 @@
 <h1 class="mb-4">3D Visualization</h1>
 <div class="row">
     <div class="col-md-8">
-        <canvas id="3d-preview"></canvas>
+        <div id="canvas-container">
+            <canvas id="3d-preview"></canvas>
+        </div>
     </div>
     <div class="col-md-4">
         <h2>Order Details</h2>
@@ -47,4 +49,26 @@
         </form>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const canvasContainer = document.getElementById('canvas-container');
+        const canvas = document.getElementById('3d-preview');
+        
+        if (canvas && canvasContainer) {
+            canvas.width = canvasContainer.clientWidth;
+            canvas.height = 400; // Set a fixed height or use a responsive approach
+            
+            console.log('Canvas dimensions:', canvas.width, 'x', canvas.height);
+            
+            // Your Three.js initialization code here
+            // ...
+        } else {
+            console.error('Canvas or container not found');
+        }
+    });
+</script>
 {% endblock %}
