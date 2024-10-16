@@ -24,13 +24,13 @@
         <p><strong>Created:</strong> {{ order.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</p>
         
         <h3 class="mt-4">Uploaded Files</h3>
-        <div class="uploaded-files mb-3">
-            <div class="d-flex justify-content-between align-items-center mb-2">
+        <div id="uploaded-files" class="uploaded-files mb-3">
+            {% if order.technical_drawing %}
+            <div class="d-flex justify-content-between align-items-center mb-2" data-filename="{{ order.technical_drawing }}">
                 <a href="{{ url_for('static', filename='uploads/' + order.technical_drawing) }}" target="_blank">{{ order.technical_drawing }}</a>
-                <form method="POST" action="{{ url_for('delete_file', order_id=order.id, filename=order.technical_drawing) }}" class="d-inline">
-                    <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Are you sure you want to delete this file?')">Delete</button>
-                </form>
+                <button class="btn btn-danger btn-sm delete-file" data-order-id="{{ order.id }}" data-filename="{{ order.technical_drawing }}">Delete</button>
             </div>
+            {% endif %}
         </div>
         
         <h3 class="mt-4">Comments</h3>
@@ -50,14 +50,12 @@
         </form>
 
         <h3 class="mt-4">Additional Files</h3>
-        <div class="additional-files mb-3">
+        <div id="additional-files" class="additional-files mb-3">
             {% if order.additional_files %}
                 {% for file in order.additional_files.split(',') %}
-                    <div class="d-flex justify-content-between align-items-center mb-2">
+                    <div class="d-flex justify-content-between align-items-center mb-2" data-filename="{{ file }}">
                         <a href="{{ url_for('static', filename='uploads/' + file) }}" target="_blank">{{ file }}</a>
-                        <form method="POST" action="{{ url_for('delete_file', order_id=order.id, filename=file) }}" class="d-inline">
-                            <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Are you sure you want to delete this file?')">Delete</button>
-                        </form>
+                        <button class="btn btn-danger btn-sm delete-file" data-order-id="{{ order.id }}" data-filename="{{ file }}">Delete</button>
                     </div>
                 {% endfor %}
             {% else %}
@@ -78,4 +76,46 @@
 {% block extra_js %}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/examples/js/controls/OrbitControls.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const deleteButtons = document.querySelectorAll('.delete-file');
+        deleteButtons.forEach(button => {
+            button.addEventListener('click', function(e) {
+                e.preventDefault();
+                const orderId = this.getAttribute('data-order-id');
+                const filename = this.getAttribute('data-filename');
+                if (confirm('Are you sure you want to delete this file?')) {
+                    fetch(`/delete_file/${orderId}/${filename}`, {
+                        method: 'POST'
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            const fileElement = this.closest(`[data-filename="${filename}"]`);
+                            fileElement.remove();
+                            showFeedback('File deleted successfully', 'success');
+                        } else {
+                            showFeedback('Error deleting file', 'error');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        showFeedback('Error deleting file', 'error');
+                    });
+                }
+            });
+        });
+    });
+
+    function showFeedback(message, type) {
+        const feedbackDiv = document.createElement('div');
+        feedbackDiv.className = `alert alert-${type} alert-dismissible fade show`;
+        feedbackDiv.role = 'alert';
+        feedbackDiv.innerHTML = `
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        `;
+        document.querySelector('.container').insertBefore(feedbackDiv, document.querySelector('.container').firstChild);
+    }
+</script>
 {% endblock %}

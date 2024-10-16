@@ -141,7 +141,10 @@ function initializeVisualization() {
 
             fetch(`/get_model_data/${orderId}`)
                 .then(response => { 
-                    console.log('Response status:', response.status); 
+                    console.log('Response status:', response.status);
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
                     return response.json(); 
                 })
                 .then(data => {
@@ -159,7 +162,10 @@ function initializeVisualization() {
                 .catch(error => {
                     console.error('Error loading model:', error);
                     showFeedback('Error loading model. Please try uploading the file again.', 'error');
-                    if (fallbackMessage) fallbackMessage.style.display = 'block';
+                    if (fallbackMessage) {
+                        fallbackMessage.textContent = `Error loading model: ${error.message}. File name: ${orderId}`;
+                        fallbackMessage.style.display = 'block';
+                    }
                 })
                 .finally(() => {
                     if (loadingIndicator) loadingIndicator.style.display = 'none';
@@ -214,7 +220,10 @@ function initializeVisualization() {
             } catch (error) {
                 console.error('Error displaying 3D model:', error);
                 showFeedback('Error displaying 3D model. Please try uploading the file again.', 'error');
-                if (fallbackMessage) fallbackMessage.style.display = 'block';
+                if (fallbackMessage) {
+                    fallbackMessage.textContent = `Error displaying 3D model: ${error.message}`;
+                    fallbackMessage.style.display = 'block';
+                }
             }
         }
 

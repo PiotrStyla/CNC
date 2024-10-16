@@ -159,12 +159,14 @@ def delete_file(order_id, filename):
     if os.path.exists(file_path):
         try:
             os.remove(file_path)
-            if order.additional_files:
+            if filename == order.technical_drawing:
+                order.technical_drawing = None
+            elif order.additional_files:
                 files = order.additional_files.split(',')
                 if filename in files:
                     files.remove(filename)
                     order.additional_files = ','.join(files)
-                    db.session.commit()
+            db.session.commit()
             flash('File deleted successfully', 'success')
             logging.info(f"File deleted successfully: {file_path}")
         except Exception as e:
