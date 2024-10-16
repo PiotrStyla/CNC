@@ -81,10 +81,10 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     if (document.getElementById('3d-preview')) {
-        console.log('Initializing visualization');
+        console.log('3D preview canvas found, initializing visualization');
         initializeVisualization();
     } else {
-        console.log('Not on visualization page, skipping visualization initialization');
+        console.log('3D preview canvas not found, skipping visualization initialization');
     }
 
     // Add event listeners for file deletion

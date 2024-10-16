@@ -77,6 +77,7 @@ def get_model_data(order_id):
     if order:
         file_path = os.path.join(app.config['UPLOAD_FOLDER'], order.technical_drawing)
         file_extension = os.path.splitext(order.technical_drawing)[1].lower()
+        logging.info(f"File path: {file_path}, File extension: {file_extension}")
 
         if file_extension in ['.stl', '.obj', '.step', '.stp']:
             logging.info(f"Processing 3D file: {order.technical_drawing}")
