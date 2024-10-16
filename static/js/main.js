@@ -9,8 +9,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
     if (fileInput) {
         fileInput.addEventListener('change', function(e) {
-            let fileName = e.target.files[0].name;
-            fileLabel.textContent = fileName;
+            if (e.target.files.length > 0) {
+                let fileName = e.target.files[0].name;
+                fileLabel.textContent = fileName;
+            } else {
+                fileLabel.textContent = 'Choose file';
+            }
         });
     }
 
@@ -18,7 +22,7 @@ document.addEventListener('DOMContentLoaded', function() {
         uploadForm.addEventListener('submit', function(e) {
             e.preventDefault();
             
-            if (!fileInput.files[0]) {
+            if (!fileInput || !fileInput.files[0]) {
                 showFeedback('Please select a file to upload.', 'warning');
                 return;
             }
@@ -31,7 +35,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 method: 'POST',
                 body: formData
             })
-            .then(response => response.text())
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.text();
+            })
             .then(html => {
                 const parser = new DOMParser();
                 const doc = parser.parseFromString(html, 'text/html');
@@ -46,7 +55,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     });
                 } else {
                     // If no flash messages, assume success and redirect
-                    window.location.href = response.url;
+                    window.location.href = '/visualization/' + getOrderIdFromHtml(html);
                 }
             })
             .catch(error => {
@@ -61,6 +70,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function showFeedback(message, type) {
         feedbackDiv.innerHTML = `<div class="alert alert-${type}" role="alert">${message}</div>`;
+    }
+
+    function getOrderIdFromHtml(html) {
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, 'text/html');
+        const orderIdElement = doc.querySelector('[data-order-id]');
+        return orderIdElement ? orderIdElement.dataset.orderId : null;
     }
 
     // 3D Visualization
@@ -82,7 +98,12 @@ document.addEventListener('DOMContentLoaded', function() {
         // Load the 3D model
         const loader = new THREE.BufferGeometryLoader();
         fetch('/get_model_data')
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
             .then(data => {
                 if (data.vertices && data.faces) {
                     const geometry = new THREE.BufferGeometry();

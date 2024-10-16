@@ -106,22 +106,32 @@ def add_comment(order_id):
 @app.route('/upload_additional_file/<int:order_id>', methods=['POST'])
 def upload_additional_file(order_id):
     order = Order.query.get_or_404(order_id)
-    if 'additional_file' in request.files:
-        file = request.files['additional_file']
-        if file and allowed_file(file.filename):
-            try:
-                filename = secure_filename(file.filename)
-                file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-                os.makedirs(os.path.dirname(file_path), exist_ok=True)
-                file.save(file_path)
-                if order.additional_files:
-                    order.additional_files += ',' + filename
-                else:
-                    order.additional_files = filename
-                db.session.commit()
-                flash('Additional file uploaded successfully', 'success')
-            except Exception as e:
-                flash(f'Error uploading additional file: {str(e)}', 'error')
-        else:
-            flash('Invalid file type', 'error')
+    if 'additional_file' not in request.files:
+        flash('No file part', 'error')
+        logging.error("Additional file upload failed: No file part in request")
+        return redirect(url_for('visualization', order_id=order.id))
+    file = request.files['additional_file']
+    if file.filename == '':
+        flash('No selected file', 'error')
+        logging.error("Additional file upload failed: No selected file")
+        return redirect(url_for('visualization', order_id=order.id))
+    if file and allowed_file(file.filename):
+        try:
+            filename = secure_filename(file.filename)
+            file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            os.makedirs(os.path.dirname(file_path), exist_ok=True)
+            file.save(file_path)
+            if order.additional_files:
+                order.additional_files += ',' + filename
+            else:
+                order.additional_files = filename
+            db.session.commit()
+            flash('Additional file uploaded successfully', 'success')
+            logging.info(f"Additional file uploaded successfully: {file_path}")
+        except Exception as e:
+            flash(f'Error uploading additional file: {str(e)}', 'error')
+            logging.error(f"Error uploading additional file: {str(e)}", exc_info=True)
+    else:
+        flash('Invalid file type', 'error')
+        logging.warning(f"Invalid additional file type: {file.filename}")
     return redirect(url_for('visualization', order_id=order.id))
