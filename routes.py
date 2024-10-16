@@ -17,10 +17,12 @@ def upload():
     if request.method == 'POST':
         if 'technical_drawing' not in request.files:
             flash('No file part', 'error')
+            logging.error("File upload failed: No file part")
             return redirect(request.url)
         file = request.files['technical_drawing']
         if file.filename == '':
             flash('No selected file', 'error')
+            logging.error("File upload failed: No selected file")
             return redirect(request.url)
         if file and allowed_file(file.filename):
             try:
@@ -31,9 +33,11 @@ def upload():
                 logging.info(f"File saved successfully: {file_path}")
                 
                 # Validate STL file
-                if not validate_stl_file(file_path):
+                validation_result = validate_stl_file(file_path)
+                if not validation_result['valid']:
                     os.remove(file_path)
-                    flash('Invalid or corrupted STL file. Please check your file and try again.', 'error')
+                    flash(f"Invalid or corrupted STL file: {validation_result['message']}", 'error')
+                    logging.error(f"STL file validation failed: {validation_result['message']}")
                     return redirect(request.url)
                 
                 # Process CAD file and generate 3D model

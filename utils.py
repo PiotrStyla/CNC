@@ -23,16 +23,13 @@ def is_binary_stl(file_path):
 
 def validate_stl_file(file_path):
     if not os.path.exists(file_path):
-        logging.error(f"File not found: {file_path}")
-        return False
+        return {'valid': False, 'message': "File not found"}
 
     if not file_path.lower().endswith('.stl'):
-        logging.error(f"Not an STL file: {file_path}")
-        return False
+        return {'valid': False, 'message': "Not an STL file"}
 
     if os.path.getsize(file_path) < 84:  # Minimum size for a valid STL file
-        logging.error(f"File too small to be a valid STL: {file_path}")
-        return False
+        return {'valid': False, 'message': "File too small to be a valid STL"}
 
     try:
         with open(file_path, 'rb') as f:
@@ -42,19 +39,16 @@ def validate_stl_file(file_path):
                 face_count = struct.unpack('<I', f.read(4))[0]
                 expected_size = 84 + face_count * 50
                 if os.path.getsize(file_path) != expected_size:
-                    logging.error(f"Invalid binary STL file size: {file_path}")
-                    return False
+                    return {'valid': False, 'message': "Invalid binary STL file size"}
             else:
                 # ASCII STL validation
                 first_line = f.readline().strip().lower()
                 if not first_line.startswith(b'solid'):
-                    logging.error(f"Invalid ASCII STL file: {file_path}")
-                    return False
+                    return {'valid': False, 'message': "Invalid ASCII STL file"}
     except Exception as e:
-        logging.error(f"Error validating STL file: {file_path}. Error: {str(e)}")
-        return False
+        return {'valid': False, 'message': f"Error validating STL file: {str(e)}"}
 
-    return True
+    return {'valid': True, 'message': "STL file is valid"}
 
 def process_cad_file(filename):
     try:
@@ -62,8 +56,9 @@ def process_cad_file(filename):
         if filename.lower().endswith('.stl'):
             logging.info(f"Processing STL file: {filename}")
 
-            if not validate_stl_file(file_path):
-                return {'error': 'Invalid or corrupted STL file'}
+            validation_result = validate_stl_file(file_path)
+            if not validation_result['valid']:
+                return {'error': validation_result['message']}
 
             try:
                 # Load the STL file
