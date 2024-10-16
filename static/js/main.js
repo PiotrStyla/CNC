@@ -100,9 +100,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
             // Adjust camera position
             camera.position.z = 10;
+
+            console.log('Scene initialized');
         }
 
         function loadModel() {
+            console.log('Fetching model data...');
             fetch('/get_model_data')
                 .then(response => {
                     if (!response.ok) {
@@ -111,6 +114,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     return response.json();
                 })
                 .then(data => {
+                    console.log('Model data received:', data);
                     if (data.vertices && data.faces) {
                         const geometry = new THREE.BufferGeometry();
                         geometry.setAttribute('position', new THREE.Float32BufferAttribute(data.vertices.flat(), 3));
@@ -126,6 +130,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         mesh.scale.set(scale, scale, scale);
 
                         scene.add(mesh);
+                        console.log('Model added to scene');
 
                         // Start animation
                         animate();
@@ -149,16 +154,21 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         function handleResize() {
-            camera.aspect = canvas.clientWidth / canvas.clientHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(canvas.clientWidth, canvas.clientHeight);
+            if (camera && renderer) {
+                camera.aspect = canvas.clientWidth / canvas.clientHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(canvas.clientWidth, canvas.clientHeight);
+            }
         }
 
         // Initialize and load
+        console.log('Initializing 3D preview');
         initScene();
         loadModel();
 
         // Handle window resize
         window.addEventListener('resize', handleResize);
+    } else {
+        console.error('3D preview canvas not found');
     }
 });
