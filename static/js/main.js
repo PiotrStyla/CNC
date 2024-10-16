@@ -86,6 +86,19 @@ document.addEventListener('DOMContentLoaded', function() {
     } else {
         console.log('Not on visualization page, skipping visualization initialization');
     }
+
+    // Add event listeners for file deletion
+    const deleteButtons = document.querySelectorAll('.delete-file');
+    deleteButtons.forEach(button => {
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
+            const orderId = this.getAttribute('data-order-id');
+            const filename = this.getAttribute('data-filename');
+            if (confirm('Are you sure you want to delete this file?')) {
+                deleteFile(orderId, filename);
+            }
+        });
+    });
 });
 
 function initializeVisualization() {
@@ -176,6 +189,7 @@ function initializeVisualization() {
             imagePreview.style.display = 'block';
             imagePreview.src = `/static/uploads/${filename}`;
             imagePreview.alt = 'Uploaded Image';
+            console.log('Image displayed successfully');
         }
 
         function display3DModel(data) {
@@ -213,6 +227,7 @@ function initializeVisualization() {
 
                 controls.target.copy(center);
                 controls.update();
+                console.log('Camera and controls updated');
             } catch (error) {
                 console.error('Error displaying 3D model:', error);
                 showFeedback('Error displaying 3D model. Please try uploading the file again.', 'error');
@@ -269,4 +284,32 @@ function getOrderIdFromHtml(html) {
     const doc = parser.parseFromString(html, 'text/html');
     const orderIdElement = doc.querySelector('[data-order-id]');
     return orderIdElement ? orderIdElement.dataset.orderId : null;
+}
+
+function deleteFile(orderId, filename) {
+    console.log(`Deleting file: ${filename} for order: ${orderId}`);
+    fetch(`/delete_file/${orderId}/${filename}`, {
+        method: 'POST'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            console.log('File deleted successfully');
+            const fileElement = document.querySelector(`[data-filename="${filename}"]`);
+            if (fileElement) {
+                fileElement.remove();
+            }
+            showFeedback(data.message, 'success');
+            if (data.redirect) {
+                window.location.href = data.redirect;
+            }
+        } else {
+            console.error('Error deleting file:', data.message);
+            showFeedback(data.message, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showFeedback('Error deleting file. Please try again.', 'error');
+    });
 }

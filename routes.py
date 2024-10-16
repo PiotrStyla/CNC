@@ -161,8 +161,9 @@ def delete_file(order_id, filename):
             logging.info(f"File deleted from file system: {file_path}")
             
             if filename == order.technical_drawing:
-                order.technical_drawing = None
-                logging.info(f"Removed technical drawing reference for order {order_id}")
+                # Delete the entire order if it's the technical drawing
+                db.session.delete(order)
+                logging.info(f"Deleted order {order_id} as its technical drawing was deleted")
             elif order.additional_files:
                 files = order.additional_files.split(',')
                 if filename in files:
@@ -174,7 +175,10 @@ def delete_file(order_id, filename):
             flash('File deleted successfully', 'success')
             logging.info(f"Database updated successfully for order {order_id}")
             
-            return jsonify({'success': True, 'message': 'File deleted successfully'})
+            if filename == order.technical_drawing:
+                return jsonify({'success': True, 'message': 'File and order deleted successfully', 'redirect': url_for('order_management')})
+            else:
+                return jsonify({'success': True, 'message': 'File deleted successfully'})
         except Exception as e:
             db.session.rollback()
             error_message = f'Error deleting file: {str(e)}'
