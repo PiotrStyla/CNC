@@ -1,6 +1,16 @@
+console.log('main.js is being executed', new Date().toISOString());
+
+import * as THREE from 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.module.js';
+import { OrbitControls } from 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/examples/jsm/controls/OrbitControls.js';
+
+console.log('Imports completed');
+console.log('Three.js version:', THREE ? THREE.REVISION : 'not loaded');
+console.log('OrbitControls imported:', typeof OrbitControls !== 'undefined' ? 'yes' : 'no');
+
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOMContentLoaded event fired');
+
     const fileInput = document.getElementById('technical_drawing');
-    const fileLabel = document.querySelector('.custom-file-label');
     const uploadForm = document.querySelector('form');
     const uploadButton = document.querySelector('button[type="submit"]');
     const feedbackDiv = document.createElement('div');
@@ -14,9 +24,9 @@ document.addEventListener('DOMContentLoaded', function() {
         fileInput.addEventListener('change', function(e) {
             if (e.target.files.length > 0) {
                 let fileName = e.target.files[0].name;
-                fileLabel.textContent = fileName;
+                fileInput.nextElementSibling.textContent = fileName;
             } else {
-                fileLabel.textContent = 'Choose file';
+                fileInput.nextElementSibling.textContent = 'Choose file';
             }
         });
     }
@@ -75,6 +85,8 @@ document.addEventListener('DOMContentLoaded', function() {
     if (document.getElementById('3d-preview')) {
         console.log('Initializing 3D preview');
         initializeVisualization();
+    } else {
+        console.log('Not on visualization page, skipping 3D preview initialization');
     }
 });
 
@@ -84,11 +96,14 @@ function initializeVisualization() {
         let scene, camera, renderer, mesh, controls;
 
         function initScene() {
+            console.log('Initializing Three.js scene');
             scene = new THREE.Scene();
             camera = new THREE.PerspectiveCamera(75, canvas.clientWidth / canvas.clientHeight, 0.1, 1000);
             renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
 
             renderer.setSize(canvas.clientWidth, canvas.clientHeight);
+            renderer.setClearColor(0x000000, 1);
+            console.log('Renderer size:', renderer.getSize(new THREE.Vector2()));
 
             // Add lights
             const ambientLight = new THREE.AmbientLight(0x404040);
@@ -101,23 +116,31 @@ function initializeVisualization() {
             camera.position.z = 5;
 
             // Add OrbitControls
-            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls = new OrbitControls(camera, renderer.domElement);
             controls.enableDamping = true;
             controls.dampingFactor = 0.25;
             controls.enableZoom = true;
 
             // Add a simple cube to verify rendering
             const geometry = new THREE.BoxGeometry(1, 1, 1);
-            const material = new THREE.MeshPhongMaterial({ color: 0x00ff00 });
+            const material = new THREE.MeshPhongMaterial({ color: 0x00ff00, wireframe: true });
             const cube = new THREE.Mesh(geometry, material);
             scene.add(cube);
 
-            console.log('Scene initialized');
+            console.log('Scene initialized with cube');
         }
 
         function loadModel() {
             console.log('Fetching model data...');
-            fetch('/get_model_data')
+            const currentUrl = window.location.href;
+            const orderId = currentUrl.split('/').pop();
+            console.log('Current URL:', currentUrl);
+            console.log('Order ID:', orderId);
+            fetch(`/get_model_data/${orderId}`)
+                .then(response => { 
+                    console.log('Response status:', response.status); 
+                    return response; 
+                })
                 .then(response => {
                     if (!response.ok) {
                         throw new Error(`HTTP error! status: ${response.status}`);
@@ -126,6 +149,7 @@ function initializeVisualization() {
                 })
                 .then(data => {
                     console.log('Model data received:', data);
+                    console.log('Vertices:', data.vertices ? data.vertices.length : 'None', 'Faces:', data.faces ? data.faces.length : 'None');
                     if (data.vertices && data.faces) {
                         const geometry = new THREE.BufferGeometry();
                         geometry.setAttribute('position', new THREE.Float32BufferAttribute(data.vertices.flat(), 3));
@@ -147,6 +171,7 @@ function initializeVisualization() {
                         const boundingBox = new THREE.Box3().setFromObject(mesh);
                         const center = boundingBox.getCenter(new THREE.Vector3());
                         const size = boundingBox.getSize(new THREE.Vector3());
+                        console.log('Model size:', size);
 
                         const maxDim = Math.max(size.x, size.y, size.z);
                         const fov = camera.fov * (Math.PI / 180);
@@ -170,7 +195,9 @@ function initializeVisualization() {
         function animate() {
             requestAnimationFrame(animate);
             controls.update();
-            renderer.render(scene, camera);
+            if (mesh) mesh.rotation.y += 0.01;
+            if (renderer && scene && camera) renderer.render(scene, camera);
+            console.log('Frame rendered');
         }
 
         function handleResize() {
@@ -178,6 +205,7 @@ function initializeVisualization() {
                 camera.aspect = canvas.clientWidth / canvas.clientHeight;
                 camera.updateProjectionMatrix();
                 renderer.setSize(canvas.clientWidth, canvas.clientHeight);
+                console.log('Resized renderer:', renderer.getSize(new THREE.Vector2()));
             }
         }
 
