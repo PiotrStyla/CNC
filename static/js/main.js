@@ -95,6 +95,7 @@ function initializeVisualization() {
     const canvas = document.getElementById('3d-preview');
     const imagePreview = document.getElementById('image-preview');
     const loadingIndicator = document.getElementById('loading-indicator');
+    const fallbackMessage = document.getElementById('fallback-message');
     if (canvas) {
         console.log('Canvas found, dimensions:', canvas.clientWidth, 'x', canvas.clientHeight);
         let scene, camera, renderer, mesh, controls;
@@ -136,6 +137,7 @@ function initializeVisualization() {
             console.log('Order ID:', orderId);
             
             if (loadingIndicator) loadingIndicator.style.display = 'block';
+            if (fallbackMessage) fallbackMessage.style.display = 'none';
 
             fetch(`/get_model_data/${orderId}`)
                 .then(response => { 
@@ -157,6 +159,7 @@ function initializeVisualization() {
                 .catch(error => {
                     console.error('Error loading model:', error);
                     showFeedback('Error loading model. Please try uploading the file again.', 'error');
+                    if (fallbackMessage) fallbackMessage.style.display = 'block';
                 })
                 .finally(() => {
                     if (loadingIndicator) loadingIndicator.style.display = 'none';
@@ -176,37 +179,43 @@ function initializeVisualization() {
             canvas.style.display = 'block';
             imagePreview.style.display = 'none';
 
-            const geometry = new THREE.BufferGeometry();
-            geometry.setAttribute('position', new THREE.Float32BufferAttribute(data.vertices.flat(), 3));
-            geometry.setIndex(data.faces.flat());
-            geometry.computeVertexNormals();
+            try {
+                const geometry = new THREE.BufferGeometry();
+                geometry.setAttribute('position', new THREE.Float32BufferAttribute(data.vertices.flat(), 3));
+                geometry.setIndex(data.faces.flat());
+                geometry.computeVertexNormals();
 
-            const material = new THREE.MeshPhongMaterial({ color: 0x00ff00, wireframe: false });
-            mesh = new THREE.Mesh(geometry, material);
+                const material = new THREE.MeshPhongMaterial({ color: 0x00ff00, wireframe: false });
+                mesh = new THREE.Mesh(geometry, material);
 
-            // Center and scale the model
-            mesh.position.set(-data.center[0], -data.center[1], -data.center[2]);
-            const scale = 5 / Math.max(...data.size);
-            mesh.scale.set(scale, scale, scale);
+                // Center and scale the model
+                mesh.position.set(-data.center[0], -data.center[1], -data.center[2]);
+                const scale = 5 / Math.max(...data.size);
+                mesh.scale.set(scale, scale, scale);
 
-            scene.add(mesh);
-            console.log('Model added to scene');
+                scene.add(mesh);
+                console.log('Model added to scene');
 
-            // Adjust camera to fit the model
-            const boundingBox = new THREE.Box3().setFromObject(mesh);
-            const center = boundingBox.getCenter(new THREE.Vector3());
-            const size = boundingBox.getSize(new THREE.Vector3());
-            console.log('Model size:', size);
+                // Adjust camera to fit the model
+                const boundingBox = new THREE.Box3().setFromObject(mesh);
+                const center = boundingBox.getCenter(new THREE.Vector3());
+                const size = boundingBox.getSize(new THREE.Vector3());
+                console.log('Model size:', size);
 
-            const maxDim = Math.max(size.x, size.y, size.z);
-            const fov = camera.fov * (Math.PI / 180);
-            let cameraZ = Math.abs(maxDim / 2 / Math.tan(fov / 2));
+                const maxDim = Math.max(size.x, size.y, size.z);
+                const fov = camera.fov * (Math.PI / 180);
+                let cameraZ = Math.abs(maxDim / 2 / Math.tan(fov / 2));
 
-            camera.position.z = cameraZ * 1.5; // Add some padding
-            camera.updateProjectionMatrix();
+                camera.position.z = cameraZ * 1.5; // Add some padding
+                camera.updateProjectionMatrix();
 
-            controls.target.copy(center);
-            controls.update();
+                controls.target.copy(center);
+                controls.update();
+            } catch (error) {
+                console.error('Error displaying 3D model:', error);
+                showFeedback('Error displaying 3D model. Please try uploading the file again.', 'error');
+                if (fallbackMessage) fallbackMessage.style.display = 'block';
+            }
         }
 
         function animate() {

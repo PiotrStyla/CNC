@@ -42,6 +42,7 @@ def upload():
                         repair_result = repair_stl_file(file_path)
                         if repair_result['success']:
                             file_path = repair_result['repaired_file']
+                            filename = os.path.basename(file_path)
                             flash(f"File was repaired: {repair_result['message']}", 'warning')
                             logging.info(f"STL file repaired: {file_path}")
                         else:
@@ -50,11 +51,11 @@ def upload():
                             logging.error(f"STL file validation failed and repair unsuccessful: {validation_result['message']}")
                             return redirect(request.url)
                 
-                # Create a new order without specifying user_id
-                order = Order(technical_drawing=os.path.basename(file_path))
+                # Create a new order with the correct filename
+                order = Order(technical_drawing=filename)
                 db.session.add(order)
                 db.session.commit()
-                logging.info(f"New order created with ID: {order.id}")
+                logging.info(f"New order created with ID: {order.id} and filename: {filename}")
                 
                 flash('File uploaded and processed successfully', 'success')
                 return redirect(url_for('visualization', order_id=order.id))
