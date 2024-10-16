@@ -91,8 +91,10 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function initializeVisualization() {
+    console.log('initializeVisualization function called');
     const canvas = document.getElementById('3d-preview');
     if (canvas) {
+        console.log('Canvas found, dimensions:', canvas.clientWidth, 'x', canvas.clientHeight);
         let scene, camera, renderer, mesh, controls;
 
         function initScene() {
@@ -131,26 +133,21 @@ function initializeVisualization() {
         }
 
         function loadModel() {
-            console.log('Fetching model data...');
+            console.log('loadModel function called');
             const currentUrl = window.location.href;
             const orderId = currentUrl.split('/').pop();
             console.log('Current URL:', currentUrl);
             console.log('Order ID:', orderId);
+            
             fetch(`/get_model_data/${orderId}`)
                 .then(response => { 
                     console.log('Response status:', response.status); 
-                    return response; 
-                })
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
-                    return response.json();
+                    return response.json(); 
                 })
                 .then(data => {
                     console.log('Model data received:', data);
-                    console.log('Vertices:', data.vertices ? data.vertices.length : 'None', 'Faces:', data.faces ? data.faces.length : 'None');
                     if (data.vertices && data.faces) {
+                        console.log('Vertices:', data.vertices.length, 'Faces:', data.faces.length);
                         const geometry = new THREE.BufferGeometry();
                         geometry.setAttribute('position', new THREE.Float32BufferAttribute(data.vertices.flat(), 3));
                         geometry.setIndex(data.faces.flat());
@@ -183,6 +180,7 @@ function initializeVisualization() {
                         controls.target.copy(center);
                         controls.update();
                     } else {
+                        console.error('Invalid model data received:', data);
                         throw new Error('Invalid model data received');
                     }
                 })
@@ -196,17 +194,15 @@ function initializeVisualization() {
             requestAnimationFrame(animate);
             controls.update();
             if (mesh) mesh.rotation.y += 0.01;
-            if (renderer && scene && camera) renderer.render(scene, camera);
-            console.log('Frame rendered');
+            renderer.render(scene, camera);
         }
 
         function handleResize() {
-            if (camera && renderer) {
-                camera.aspect = canvas.clientWidth / canvas.clientHeight;
-                camera.updateProjectionMatrix();
-                renderer.setSize(canvas.clientWidth, canvas.clientHeight);
-                console.log('Resized renderer:', renderer.getSize(new THREE.Vector2()));
-            }
+            console.log('Window resized');
+            camera.aspect = canvas.clientWidth / canvas.clientHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(canvas.clientWidth, canvas.clientHeight);
+            console.log('New renderer size:', renderer.getSize(new THREE.Vector2()));
         }
 
         // Initialize and load

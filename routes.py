@@ -1,5 +1,5 @@
 import os
-from flask import render_template, request, redirect, url_for, flash, jsonify
+from flask import render_template, request, redirect, url_for, flash, jsonify, send_from_directory
 from werkzeug.utils import secure_filename
 from app import app, db
 from models import User, Order
@@ -79,14 +79,20 @@ def visualization(order_id):
     order = Order.query.get_or_404(order_id)
     return render_template('visualization.html', order=order)
 
-@app.route('/get_model_data')
-def get_model_data():
-    latest_order = Order.query.order_by(Order.id.desc()).first()
-    if latest_order:
-        model_data = process_cad_file(latest_order.technical_drawing)
+@app.route('/get_model_data/<int:order_id>')
+def get_model_data(order_id):
+    logging.info(f"get_model_data called for order_id: {order_id}")
+    order = Order.query.get_or_404(order_id)
+    if order:
+        model_data = process_cad_file(order.technical_drawing)
         if model_data:
+            logging.info(f"Model data processed for order_id: {order_id}")
             return jsonify(model_data)
-    return jsonify({'error': 'No model data available'}), 404
+        else:
+            logging.error(f"Error processing model data for order_id: {order_id}")
+            return jsonify({'error': 'Error processing model data'}), 500
+    logging.error(f"Order not found for order_id: {order_id}")
+    return jsonify({'error': 'Order not found'}), 404
 
 @app.route('/order_management')
 def order_management():
@@ -135,3 +141,7 @@ def upload_additional_file(order_id):
         flash('Invalid file type', 'error')
         logging.warning(f"Invalid additional file type: {file.filename}")
     return redirect(url_for('visualization', order_id=order.id))
+
+@app.route('/static/<path:filename>')
+def serve_static(filename):
+    return send_from_directory(app.static_folder, filename)
