@@ -33,12 +33,10 @@ def upload():
                 logging.info(f"File saved successfully: {file_path}")
                 
                 if filename.lower().endswith('.stl'):
-                    # Validate STL file
                     validation_result = validate_stl_file(file_path)
                     if not validation_result['valid']:
                         logging.warning(f"STL file validation failed: {validation_result['message']}")
                         
-                        # Attempt to repair the file
                         repair_result = repair_stl_file(file_path)
                         if repair_result['success']:
                             file_path = repair_result['repaired_file']
@@ -51,7 +49,6 @@ def upload():
                             logging.error(f"STL file validation failed and repair unsuccessful: {validation_result['message']}")
                             return redirect(request.url)
                 
-                # Create a new order with the correct filename
                 order = Order(technical_drawing=filename)
                 db.session.add(order)
                 db.session.commit()
@@ -156,27 +153,39 @@ def delete_file(order_id, filename):
     order = Order.query.get_or_404(order_id)
     file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
     
+    logging.info(f"Attempting to delete file: {file_path}")
+    
     if os.path.exists(file_path):
         try:
             os.remove(file_path)
+            logging.info(f"File deleted from file system: {file_path}")
+            
             if filename == order.technical_drawing:
                 order.technical_drawing = None
+                logging.info(f"Removed technical drawing reference for order {order_id}")
             elif order.additional_files:
                 files = order.additional_files.split(',')
                 if filename in files:
                     files.remove(filename)
                     order.additional_files = ','.join(files)
+                    logging.info(f"Removed {filename} from additional files for order {order_id}")
+            
             db.session.commit()
             flash('File deleted successfully', 'success')
-            logging.info(f"File deleted successfully: {file_path}")
+            logging.info(f"Database updated successfully for order {order_id}")
+            
+            return jsonify({'success': True, 'message': 'File deleted successfully'})
         except Exception as e:
-            flash(f'Error deleting file: {str(e)}', 'error')
-            logging.error(f"Error deleting file: {str(e)}", exc_info=True)
+            db.session.rollback()
+            error_message = f'Error deleting file: {str(e)}'
+            flash(error_message, 'error')
+            logging.error(error_message, exc_info=True)
+            return jsonify({'success': False, 'message': error_message}), 500
     else:
-        flash('File not found', 'error')
-        logging.warning(f"File not found for deletion: {file_path}")
-    
-    return redirect(url_for('visualization', order_id=order.id))
+        error_message = f'File not found: {file_path}'
+        flash(error_message, 'error')
+        logging.warning(error_message)
+        return jsonify({'success': False, 'message': error_message}), 404
 
 @app.route('/static/<path:filename>')
 def serve_static(filename):

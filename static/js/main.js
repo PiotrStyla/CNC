@@ -67,7 +67,6 @@ document.addEventListener('DOMContentLoaded', function() {
                         showFeedback(messageText, messageType);
                     });
                 } else {
-                    // If no flash messages, assume success and redirect
                     window.location.href = '/visualization/' + getOrderIdFromHtml(html);
                 }
             })
@@ -81,7 +80,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Check if we're on the visualization page
     if (document.getElementById('3d-preview')) {
         console.log('Initializing visualization');
         initializeVisualization();
@@ -102,31 +100,33 @@ function initializeVisualization() {
 
         function initScene() {
             console.log('Initializing Three.js scene');
-            scene = new THREE.Scene();
-            camera = new THREE.PerspectiveCamera(75, canvas.clientWidth / canvas.clientHeight, 0.1, 1000);
-            renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
+            try {
+                scene = new THREE.Scene();
+                camera = new THREE.PerspectiveCamera(75, canvas.clientWidth / canvas.clientHeight, 0.1, 1000);
+                renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
 
-            renderer.setSize(canvas.clientWidth, canvas.clientHeight);
-            renderer.setClearColor(0x000000, 1);
-            console.log('Renderer size:', renderer.getSize(new THREE.Vector2()));
+                renderer.setSize(canvas.clientWidth, canvas.clientHeight);
+                renderer.setClearColor(0x000000, 1);
+                console.log('Renderer size:', renderer.getSize(new THREE.Vector2()));
 
-            // Add lights
-            const ambientLight = new THREE.AmbientLight(0x404040);
-            scene.add(ambientLight);
-            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
-            directionalLight.position.set(1, 1, 1);
-            scene.add(directionalLight);
+                const ambientLight = new THREE.AmbientLight(0x404040);
+                scene.add(ambientLight);
+                const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
+                directionalLight.position.set(1, 1, 1);
+                scene.add(directionalLight);
 
-            // Adjust camera position
-            camera.position.z = 5;
+                camera.position.z = 5;
 
-            // Add OrbitControls
-            controls = new OrbitControls(camera, renderer.domElement);
-            controls.enableDamping = true;
-            controls.dampingFactor = 0.25;
-            controls.enableZoom = true;
+                controls = new OrbitControls(camera, renderer.domElement);
+                controls.enableDamping = true;
+                controls.dampingFactor = 0.25;
+                controls.enableZoom = true;
 
-            console.log('Scene initialized');
+                console.log('Scene initialized successfully');
+            } catch (error) {
+                console.error('Error initializing Three.js scene:', error);
+                showFeedback('Error initializing 3D scene. Please try refreshing the page.', 'error');
+            }
         }
 
         function loadModel() {
@@ -150,10 +150,8 @@ function initializeVisualization() {
                 .then(data => {
                     console.log('Model data received:', data);
                     if (data.type === 'image') {
-                        // Handle 2D image
                         displayImage(data.filename);
                     } else if (data.vertices && data.faces) {
-                        // Handle 3D model
                         display3DModel(data);
                     } else {
                         throw new Error('Invalid model data received');
@@ -194,7 +192,6 @@ function initializeVisualization() {
                 const material = new THREE.MeshPhongMaterial({ color: 0x00ff00, wireframe: false });
                 mesh = new THREE.Mesh(geometry, material);
 
-                // Center and scale the model
                 mesh.position.set(-data.center[0], -data.center[1], -data.center[2]);
                 const scale = 5 / Math.max(...data.size);
                 mesh.scale.set(scale, scale, scale);
@@ -202,7 +199,6 @@ function initializeVisualization() {
                 scene.add(mesh);
                 console.log('Model added to scene');
 
-                // Adjust camera to fit the model
                 const boundingBox = new THREE.Box3().setFromObject(mesh);
                 const center = boundingBox.getCenter(new THREE.Vector3());
                 const size = boundingBox.getSize(new THREE.Vector3());
@@ -212,7 +208,7 @@ function initializeVisualization() {
                 const fov = camera.fov * (Math.PI / 180);
                 let cameraZ = Math.abs(maxDim / 2 / Math.tan(fov / 2));
 
-                camera.position.z = cameraZ * 1.5; // Add some padding
+                camera.position.z = cameraZ * 1.5;
                 camera.updateProjectionMatrix();
 
                 controls.target.copy(center);
@@ -248,12 +244,10 @@ function initializeVisualization() {
             }
         }
 
-        // Initialize and load
         initScene();
         loadModel();
         animate();
 
-        // Handle window resize
         window.addEventListener('resize', handleResize);
     } else {
         console.error('3D preview canvas not found');
