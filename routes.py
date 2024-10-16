@@ -142,6 +142,31 @@ def upload_additional_file(order_id):
         logging.warning(f"Invalid additional file type: {file.filename}")
     return redirect(url_for('visualization', order_id=order.id))
 
+@app.route('/delete_file/<int:order_id>/<filename>', methods=['POST'])
+def delete_file(order_id, filename):
+    order = Order.query.get_or_404(order_id)
+    file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+    
+    if os.path.exists(file_path):
+        try:
+            os.remove(file_path)
+            if order.additional_files:
+                files = order.additional_files.split(',')
+                if filename in files:
+                    files.remove(filename)
+                    order.additional_files = ','.join(files)
+                    db.session.commit()
+            flash('File deleted successfully', 'success')
+            logging.info(f"File deleted successfully: {file_path}")
+        except Exception as e:
+            flash(f'Error deleting file: {str(e)}', 'error')
+            logging.error(f"Error deleting file: {str(e)}", exc_info=True)
+    else:
+        flash('File not found', 'error')
+        logging.warning(f"File not found for deletion: {file_path}")
+    
+    return redirect(url_for('visualization', order_id=order.id))
+
 @app.route('/static/<path:filename>')
 def serve_static(filename):
     return send_from_directory(app.static_folder, filename)

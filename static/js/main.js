@@ -194,7 +194,11 @@ function initializeVisualization() {
             requestAnimationFrame(animate);
             controls.update();
             if (mesh) mesh.rotation.y += 0.01;
-            renderer.render(scene, camera);
+            if (renderer && scene && camera) {
+                renderer.render(scene, camera);
+            } else {
+                console.error('Renderer, scene, or camera is not initialized');
+            }
         }
 
         function handleResize() {
