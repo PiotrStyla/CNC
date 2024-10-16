@@ -20,17 +20,22 @@ def upload():
             flash('No selected file', 'error')
             return redirect(request.url)
         if file and allowed_file(file.filename):
-            filename = secure_filename(file.filename)
-            file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-            file.save(file_path)
-            # Process CAD file and generate 3D model
-            model_path = process_cad_file(filename)
-            # Create a new order
-            order = Order(technical_drawing=filename, user_id=1)  # Assuming user is logged in
-            db.session.add(order)
-            db.session.commit()
-            flash('File uploaded successfully', 'success')
-            return redirect(url_for('visualization', order_id=order.id))
+            try:
+                filename = secure_filename(file.filename)
+                file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                os.makedirs(os.path.dirname(file_path), exist_ok=True)
+                file.save(file_path)
+                # Process CAD file and generate 3D model
+                model_path = process_cad_file(filename)
+                # Create a new order
+                order = Order(technical_drawing=filename, user_id=1)  # Assuming user is logged in
+                db.session.add(order)
+                db.session.commit()
+                flash('File uploaded successfully', 'success')
+                return redirect(url_for('visualization', order_id=order.id))
+            except Exception as e:
+                flash(f'Error uploading file: {str(e)}', 'error')
+                return redirect(request.url)
         else:
             flash('Invalid file type', 'error')
     return render_template('upload.html')
@@ -61,15 +66,19 @@ def upload_additional_file(order_id):
     if 'additional_file' in request.files:
         file = request.files['additional_file']
         if file and allowed_file(file.filename):
-            filename = secure_filename(file.filename)
-            file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-            file.save(file_path)
-            if order.additional_files:
-                order.additional_files += ',' + filename
-            else:
-                order.additional_files = filename
-            db.session.commit()
-            flash('Additional file uploaded successfully', 'success')
+            try:
+                filename = secure_filename(file.filename)
+                file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                os.makedirs(os.path.dirname(file_path), exist_ok=True)
+                file.save(file_path)
+                if order.additional_files:
+                    order.additional_files += ',' + filename
+                else:
+                    order.additional_files = filename
+                db.session.commit()
+                flash('Additional file uploaded successfully', 'success')
+            except Exception as e:
+                flash(f'Error uploading additional file: {str(e)}', 'error')
         else:
             flash('Invalid file type', 'error')
     return redirect(url_for('visualization', order_id=order.id))
