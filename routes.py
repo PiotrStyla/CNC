@@ -4,6 +4,9 @@ from werkzeug.utils import secure_filename
 from app import app, db
 from models import User, Order
 from utils import allowed_file, process_cad_file
+import logging
+
+logging.basicConfig(level=logging.DEBUG)
 
 @app.route('/')
 def index():
@@ -25,22 +28,31 @@ def upload():
                 file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
                 os.makedirs(os.path.dirname(file_path), exist_ok=True)
                 file.save(file_path)
+                logging.info(f"File saved successfully: {file_path}")
+                
                 # Process CAD file and generate 3D model
                 model_data = process_cad_file(filename)
-                if model_data is None:
-                    flash('Error processing the uploaded file', 'error')
+                if model_data is None or 'error' in model_data:
+                    error_message = model_data.get('error', 'Error processing the uploaded file')
+                    logging.error(f"Error processing the uploaded file: {filename}")
+                    flash(error_message, 'error')
                     return redirect(request.url)
+                
                 # Create a new order
-                order = Order(technical_drawing=filename, user_id=1)  # Assuming user is logged in
+                order = Order(technical_drawing=filename)
                 db.session.add(order)
                 db.session.commit()
-                flash('File uploaded successfully', 'success')
+                logging.info(f"New order created with ID: {order.id}")
+                
+                flash('File uploaded and processed successfully', 'success')
                 return redirect(url_for('visualization', order_id=order.id))
             except Exception as e:
+                logging.error(f"Error uploading file: {str(e)}")
                 flash(f'Error uploading file: {str(e)}', 'error')
                 return redirect(request.url)
         else:
-            flash('Invalid file type', 'error')
+            logging.warning(f"Invalid file type: {file.filename}")
+            flash('Invalid file type. Please upload a supported file format (STL, OBJ, STEP, STP).', 'error')
     return render_template('upload.html')
 
 @app.route('/visualization/<int:order_id>')
@@ -50,8 +62,6 @@ def visualization(order_id):
 
 @app.route('/get_model_data')
 def get_model_data():
-    # For simplicity, we're getting the latest order
-    # In a real application, you'd want to specify which order's data to retrieve
     latest_order = Order.query.order_by(Order.id.desc()).first()
     if latest_order:
         model_data = process_cad_file(latest_order.technical_drawing)
