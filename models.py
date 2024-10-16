@@ -10,7 +10,7 @@ class User(db.Model):
 
 class Order(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     technical_drawing = db.Column(db.String(255), nullable=False)
     additional_files = db.Column(db.Text)
     comments = db.Column(db.Text)

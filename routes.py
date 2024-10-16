@@ -57,7 +57,7 @@ def upload():
                     flash(error_message, 'error')
                     return redirect(request.url)
                 
-                # Create a new order
+                # Create a new order without specifying user_id
                 order = Order(technical_drawing=os.path.basename(file_path))
                 db.session.add(order)
                 db.session.commit()
