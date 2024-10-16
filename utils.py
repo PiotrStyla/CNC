@@ -23,13 +23,16 @@ def is_binary_stl(file_path):
 
 def validate_stl_file(file_path):
     if not os.path.exists(file_path):
+        logging.error(f"File not found: {file_path}")
         return {'valid': False, 'message': "File not found"}
 
     if not file_path.lower().endswith('.stl'):
+        logging.error(f"Not an STL file: {file_path}")
         return {'valid': False, 'message': "Not an STL file"}
 
     file_size = os.path.getsize(file_path)
     if file_size < 84:  # Minimum size for a valid STL file
+        logging.error(f"File too small to be a valid STL: {file_path}")
         return {'valid': False, 'message': "File too small to be a valid STL"}
 
     try:
@@ -40,38 +43,44 @@ def validate_stl_file(file_path):
                 face_count = struct.unpack('<I', f.read(4))[0]
                 expected_size = 84 + face_count * 50
                 if file_size != expected_size:
+                    logging.error(f"Invalid binary STL file size: {file_path}. Expected {expected_size} bytes, got {file_size} bytes")
                     return {'valid': False, 'message': f"Invalid binary STL file size. Expected {expected_size} bytes, got {file_size} bytes"}
                 
                 # Check for valid normals and vertices
                 for _ in range(face_count):
                     normal = struct.unpack('<3f', f.read(12))
-                    for _ in range(3):  # 3 vertices per face
-                        vertex = struct.unpack('<3f', f.read(12))
+                    vertices = [struct.unpack('<3f', f.read(12)) for _ in range(3)]
                     attr_byte_count = struct.unpack('<H', f.read(2))[0]
-                    if any(not -1 <= x <= 1 for x in normal) or any(not -1e6 <= x <= 1e6 for x in vertex):
+                    if any(not -1 <= x <= 1 for x in normal) or any(not -1e6 <= x <= 1e6 for v in vertices for x in v):
+                        logging.error(f"Invalid normal or vertex values in binary STL: {file_path}")
                         return {'valid': False, 'message': "Invalid normal or vertex values in binary STL"}
             else:
                 # ASCII STL validation
                 f.seek(0)
                 first_line = f.readline().strip().lower()
                 if not first_line.startswith(b'solid'):
+                    logging.error(f"Invalid ASCII STL file: {file_path}. Doesn't start with 'solid'")
                     return {'valid': False, 'message': "Invalid ASCII STL file: doesn't start with 'solid'"}
                 
                 # Check for 'endsolid' at the end
                 f.seek(-80, 2)  # Go to last 80 bytes
                 last_80_bytes = f.read().lower()
                 if b'endsolid' not in last_80_bytes:
+                    logging.error(f"Invalid ASCII STL file: {file_path}. Missing 'endsolid'")
                     return {'valid': False, 'message': "Invalid ASCII STL file: missing 'endsolid'"}
                 
                 # Check for valid facets
                 f.seek(0)
                 content = f.read().decode('utf-8', errors='ignore').lower()
                 if content.count('facet normal') != content.count('endfacet'):
+                    logging.error(f"Invalid ASCII STL file: {file_path}. Mismatched facet count")
                     return {'valid': False, 'message': "Invalid ASCII STL file: mismatched facet count"}
 
     except Exception as e:
+        logging.error(f"Error validating STL file: {file_path}. Error: {str(e)}")
         return {'valid': False, 'message': f"Error validating STL file: {str(e)}"}
 
+    logging.info(f"STL file validated successfully: {file_path}")
     return {'valid': True, 'message': "STL file is valid"}
 
 def process_cad_file(filename):
@@ -140,6 +149,8 @@ def repair_stl_file(file_path):
         repaired_file_path = file_path.replace('.stl', '_repaired.stl')
         repaired_mesh.save(repaired_file_path)
 
+        logging.info(f"STL file repaired successfully: {file_path}")
         return {'success': True, 'message': "STL file repaired successfully", 'repaired_file': repaired_file_path}
     except Exception as e:
+        logging.error(f"Failed to repair STL file: {file_path}. Error: {str(e)}")
         return {'success': False, 'message': f"Failed to repair STL file: {str(e)}"}
