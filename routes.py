@@ -26,7 +26,10 @@ def upload():
                 os.makedirs(os.path.dirname(file_path), exist_ok=True)
                 file.save(file_path)
                 # Process CAD file and generate 3D model
-                model_path = process_cad_file(filename)
+                model_data = process_cad_file(filename)
+                if model_data is None:
+                    flash('Error processing the uploaded file', 'error')
+                    return redirect(request.url)
                 # Create a new order
                 order = Order(technical_drawing=filename, user_id=1)  # Assuming user is logged in
                 db.session.add(order)
@@ -44,6 +47,17 @@ def upload():
 def visualization(order_id):
     order = Order.query.get_or_404(order_id)
     return render_template('visualization.html', order=order)
+
+@app.route('/get_model_data')
+def get_model_data():
+    # For simplicity, we're getting the latest order
+    # In a real application, you'd want to specify which order's data to retrieve
+    latest_order = Order.query.order_by(Order.id.desc()).first()
+    if latest_order:
+        model_data = process_cad_file(latest_order.technical_drawing)
+        if model_data:
+            return jsonify(model_data)
+    return jsonify({'error': 'No model data available'}), 404
 
 @app.route('/order_management')
 def order_management():
