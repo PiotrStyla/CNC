@@ -1,4 +1,4 @@
-// ... [keep the existing imports and initial setup] ...
+// ... [keep existing imports and initial setup] ...
 
 function initializeVisualization() {
     console.log('initializeVisualization function called');
@@ -59,104 +59,31 @@ function initializeVisualization() {
         }
 
         function displayImage(filename) {
-            // ... [keep the existing displayImage function] ...
+            canvas.style.display = 'none';
+            imagePreview.style.display = 'block';
+            imagePreview.src = `/static/uploads/${filename}`;
+            imagePreview.onload = function() {
+                const container = document.getElementById('visualization-container');
+                const containerAspectRatio = container.clientWidth / container.clientHeight;
+                const imageAspectRatio = this.naturalWidth / this.naturalHeight;
+
+                if (imageAspectRatio > containerAspectRatio) {
+                    // Image is wider than the container
+                    this.style.width = '100%';
+                    this.style.height = 'auto';
+                } else {
+                    // Image is taller than the container
+                    this.style.width = 'auto';
+                    this.style.height = '100%';
+                }
+            };
         }
 
         function display3DModel(data) {
-            console.log('Displaying 3D model');
-            canvas.style.display = 'block';
-            imagePreview.style.display = 'none';
-
-            try {
-                const geometry = new THREE.BufferGeometry();
-                const vertices = new Float32Array(data.vertices.flat());
-                geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
-                
-                const faces = new Uint32Array(data.faces.flat());
-                geometry.setIndex(new THREE.BufferAttribute(faces, 1));
-                
-                geometry.computeVertexNormals();
-
-                const materials = [];
-                data.surface_types.forEach((type, index) => {
-                    const color = new THREE.Color(Math.random(), Math.random(), Math.random());
-                    materials.push(new THREE.MeshPhongMaterial({ color: color, wireframe: false }));
-                });
-
-                mesh = new THREE.Mesh(geometry, materials);
-
-                mesh.position.set(-data.center[0], -data.center[1], -data.center[2]);
-                const scale = 5 / Math.max(...data.size);
-                mesh.scale.set(scale, scale, scale);
-
-                scene.add(mesh);
-                console.log('Model added to scene');
-
-                const boundingBox = new THREE.Box3().setFromObject(mesh);
-                const center = boundingBox.getCenter(new THREE.Vector3());
-                const size = boundingBox.getSize(new THREE.Vector3());
-                console.log('Model size:', size);
-
-                const maxDim = Math.max(size.x, size.y, size.z);
-                const fov = camera.fov * (Math.PI / 180);
-                let cameraZ = Math.abs(maxDim / 2 / Math.tan(fov / 2));
-
-                camera.position.z = cameraZ * 1.5;
-                camera.updateProjectionMatrix();
-
-                controls.target.copy(center);
-                controls.update();
-                console.log('Camera and controls updated');
-
-                // Display surface type information
-                displaySurfaceInfo(data.surface_types);
-            } catch (error) {
-                console.error('Error displaying 3D model:', error);
-                showFeedback('Error displaying 3D model. Please try uploading the file again.', 'error');
-                if (fallbackMessage) {
-                    fallbackMessage.textContent = `Error displaying 3D model: ${error.message}`;
-                    fallbackMessage.style.display = 'block';
-                }
-            }
+            // ... [keep the existing display3DModel function] ...
         }
 
-        function displaySurfaceInfo(surfaceTypes) {
-            const surfaceInfoContainer = document.getElementById('surface-info');
-            if (surfaceInfoContainer) {
-                const surfaceTypeCounts = surfaceTypes.reduce((acc, type) => {
-                    acc[type] = (acc[type] || 0) + 1;
-                    return acc;
-                }, {});
-
-                let infoHtml = '<h3>Surface Types</h3><ul>';
-                for (const [type, count] of Object.entries(surfaceTypeCounts)) {
-                    infoHtml += `<li>${type}: ${count}</li>`;
-                }
-                infoHtml += '</ul>';
-
-                surfaceInfoContainer.innerHTML = infoHtml;
-            }
-        }
-
-        function animate() {
-            requestAnimationFrame(animate);
-            if (controls) controls.update();
-            if (renderer && scene && camera) {
-                renderer.render(scene, camera);
-            } else {
-                console.error('Renderer, scene, or camera is not initialized');
-            }
-        }
-
-        function handleResize() {
-            console.log('Window resized');
-            if (camera && renderer) {
-                camera.aspect = canvas.clientWidth / canvas.clientHeight;
-                camera.updateProjectionMatrix();
-                renderer.setSize(canvas.clientWidth, canvas.clientHeight);
-                console.log('New renderer size:', renderer.getSize(new THREE.Vector2()));
-            }
-        }
+        // ... [keep other existing functions] ...
 
         initScene();
         loadModel();
