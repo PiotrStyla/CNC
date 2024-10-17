@@ -1,5 +1,6 @@
 {pkgs}: {
   deps = [
+    pkgs.expat
     pkgs.swig
     pkgs.opencascade-occt
     pkgs.libGLU

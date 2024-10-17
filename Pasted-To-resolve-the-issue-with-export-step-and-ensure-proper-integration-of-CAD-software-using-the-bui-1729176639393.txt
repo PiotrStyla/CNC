@@ -1,0 +1,65 @@
+To resolve the issue with `export_step` and ensure proper integration of CAD software using the `build123d` library, follow these steps:
+
+### 1. **Check `build123d` Version:**
+   Ensure that you are using the correct version of the `build123d` library. The `export_step` function might not exist in older versions, or its module structure may have changed. Update to the latest version of `build123d` using:
+
+   ```bash
+   pip install --upgrade build123d
+   ```
+
+   You can check the installed version using:
+
+   ```bash
+   pip show build123d
+   ```
+
+   Make sure the `exporters` module includes the `export_step` function in the version you're using. If not, it could be deprecated or renamed.
+
+### 2. **Alternative Method for STEP Export:**
+   If `export_step` is not available in your version, you can use an alternative CAD library like **`cadquery`**, which is more widely supported for exporting 3D models in STEP format.
+
+   Here’s how you can use `cadquery` to export a 3D model to STEP format:
+
+   1. **Install CadQuery:**
+      ```bash
+      pip install cadquery
+      ```
+
+   2. **Example Code to Create and Export a Cone in STEP Format:**
+      ```python
+      import cadquery as cq
+
+      # Create a cone in CadQuery
+      result = cq.Workplane("XY").cone(20, 10, 0)
+
+      # Export to STEP format
+      cq.exporters.export(result, 'cone_model.step')
+      ```
+
+### 3. **Explore `OCCT` (Open Cascade Technology):**
+   Both `build123d` and `cadquery` are based on the OCCT kernel, a powerful open-source CAD engine. If you are looking for more flexibility and direct access to CAD functionalities, you can explore OCCT itself or use high-level bindings like PythonOCC.
+
+   - **PythonOCC** allows you to work directly with OCCT and offers precise control over the CAD operations, including STEP export:
+     ```bash
+     pip install pythonocc-core
+     ```
+
+   Here’s how you can export a simple cone to STEP using PythonOCC:
+   ```python
+   from OCC.Core.BRepPrimAPI import BRepPrimAPI_MakeCone
+   from OCC.Core.STEPControl import STEPControl_Writer
+
+   # Create a cone
+   cone = BRepPrimAPI_MakeCone(10, 0, 20).Shape()
+
+   # Export the cone to STEP
+   step_writer = STEPControl_Writer()
+   step_writer.Transfer(cone, STEPControl_Writer)
+   step_writer.Write("cone_model.step")
+   ```
+
+### Conclusion:
+- If `export_step` is not available in `build123d`, you can either upgrade the library or switch to `cadquery`, which has better support for STEP export.
+- For advanced CAD requirements, **PythonOCC** might provide more control and direct integration with OCCT.
+
+Let me know if you'd like further clarification or more alternatives!
