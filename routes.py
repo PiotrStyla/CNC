@@ -35,23 +35,27 @@ def get_model_data(order_id):
     if order.user_id != current_user.id:
         logging.warning(f"Unauthorized access attempt for order_id: {order_id}")
         return jsonify({'error': 'Unauthorized access'}), 403
-    if order:
-        file_path = os.path.join(app.config['UPLOAD_FOLDER'], order.technical_drawing)
-        file_extension = os.path.splitext(order.technical_drawing)[1].lower()
-        logging.info(f"File path: {file_path}, File extension: {file_extension}")
+    
+    file_path = os.path.join(app.config['UPLOAD_FOLDER'], order.technical_drawing)
+    file_extension = os.path.splitext(order.technical_drawing)[1].lower()
+    logging.info(f"File path: {file_path}, File extension: {file_extension}")
 
-        try:
-            model_data = process_cad_file(order.technical_drawing)
+    try:
+        if file_extension in ['.jpg', '.jpeg', '.png', '.gif']:
+            return jsonify({
+                'type': 'image',
+                'filename': order.technical_drawing
+            })
+        else:
+            model_data = process_cad_file(file_path)
             if 'error' not in model_data:
                 logging.info(f"Model data processed successfully for order_id: {order_id}")
                 return jsonify(model_data)
             else:
                 logging.error(f"Error processing model data for order_id: {order_id}: {model_data['error']}")
                 return jsonify({'error': model_data['error']}), 500
-        except Exception as e:
-            logging.exception(f"Unexpected error processing model data for order_id: {order_id}")
-            return jsonify({'error': f'An unexpected error occurred: {str(e)}'}), 500
-    logging.error(f"Order not found for order_id: {order_id}")
-    return jsonify({'error': 'Order not found'}), 404
+    except Exception as e:
+        logging.exception(f"Unexpected error processing model data for order_id: {order_id}")
+        return jsonify({'error': f'An unexpected error occurred: {str(e)}'}), 500
 
 # ... [keep other existing routes] ...

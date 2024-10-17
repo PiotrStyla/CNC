@@ -1,6 +1,6 @@
-// ... [keep existing imports and initial setup] ...
+// Main JavaScript file for CNC Machining Company
 
-function initializeVisualization() {
+function initializeVisualization(fileExtension) {
     console.log('initializeVisualization function called');
     const canvas = document.getElementById('3d-preview');
     const imagePreview = document.getElementById('image-preview');
@@ -35,7 +35,7 @@ function initializeVisualization() {
                 scene.add(directionalLight);
             } catch (error) {
                 console.error('Error initializing scene:', error);
-                showFeedback('Error initializing 3D scene. Please try again later.', 'error');
+                showFallbackMessage('Error initializing 3D scene. Please try again later.');
             }
         }
 
@@ -72,11 +72,7 @@ function initializeVisualization() {
                 })
                 .catch(error => {
                     console.error('Error loading model:', error);
-                    showFeedback('Error loading model. Please try uploading the file again.', 'error');
-                    if (fallbackMessage) {
-                        fallbackMessage.textContent = `Error loading model: ${error.message}. File name: ${orderId}`;
-                        fallbackMessage.style.display = 'block';
-                    }
+                    showFallbackMessage(`Error loading model: ${error.message}`);
                 })
                 .finally(() => {
                     if (loadingIndicator) loadingIndicator.style.display = 'none';
@@ -105,10 +101,103 @@ function initializeVisualization() {
         }
 
         function display3DModel(data) {
-            // ... [keep the existing display3DModel function] ...
+            canvas.style.display = 'block';
+            imagePreview.style.display = 'none';
+
+            try {
+                const geometry = new THREE.BufferGeometry();
+                const vertices = new Float32Array(data.vertices.flat());
+                geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
+                
+                const faces = new Uint32Array(data.faces.flat());
+                geometry.setIndex(new THREE.BufferAttribute(faces, 1));
+                
+                geometry.computeVertexNormals();
+
+                const materials = [];
+                data.surface_types.forEach((type, index) => {
+                    const color = new THREE.Color(Math.random(), Math.random(), Math.random());
+                    materials.push(new THREE.MeshPhongMaterial({ color: color, wireframe: false }));
+                });
+
+                mesh = new THREE.Mesh(geometry, materials);
+
+                mesh.position.set(-data.center[0], -data.center[1], -data.center[2]);
+                const scale = 5 / Math.max(...data.size);
+                mesh.scale.set(scale, scale, scale);
+
+                scene.add(mesh);
+                console.log('Model added to scene');
+
+                const boundingBox = new THREE.Box3().setFromObject(mesh);
+                const center = boundingBox.getCenter(new THREE.Vector3());
+                const size = boundingBox.getSize(new THREE.Vector3());
+                console.log('Model size:', size);
+
+                const maxDim = Math.max(size.x, size.y, size.z);
+                const fov = camera.fov * (Math.PI / 180);
+                let cameraZ = Math.abs(maxDim / 2 / Math.tan(fov / 2));
+
+                camera.position.z = cameraZ * 1.5;
+                camera.updateProjectionMatrix();
+
+                if (controls) {
+                    controls.target.copy(center);
+                    controls.update();
+                }
+                console.log('Camera and controls updated');
+
+                // Display surface type information
+                displaySurfaceInfo(data.surface_types);
+            } catch (error) {
+                console.error('Error displaying 3D model:', error);
+                showFallbackMessage(`Error displaying 3D model: ${error.message}`);
+            }
         }
 
-        // ... [keep other existing functions] ...
+        function displaySurfaceInfo(surfaceTypes) {
+            const surfaceInfoContainer = document.getElementById('surface-info');
+            if (surfaceInfoContainer) {
+                const surfaceTypeCounts = surfaceTypes.reduce((acc, type) => {
+                    acc[type] = (acc[type] || 0) + 1;
+                    return acc;
+                }, {});
+
+                let infoHtml = '<h3>Surface Types</h3><ul>';
+                for (const [type, count] of Object.entries(surfaceTypeCounts)) {
+                    infoHtml += `<li>${type}: ${count}</li>`;
+                }
+                infoHtml += '</ul>';
+
+                surfaceInfoContainer.innerHTML = infoHtml;
+            }
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            if (controls) controls.update();
+            if (renderer && scene && camera) {
+                renderer.render(scene, camera);
+            }
+        }
+
+        function handleResize() {
+            console.log('Window resized');
+            if (camera && renderer) {
+                camera.aspect = canvas.clientWidth / canvas.clientHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(canvas.clientWidth, canvas.clientHeight);
+                console.log('New renderer size:', renderer.getSize(new THREE.Vector2()));
+            }
+        }
+
+        function showFallbackMessage(message) {
+            if (fallbackMessage) {
+                fallbackMessage.textContent = message;
+                fallbackMessage.style.display = 'block';
+            }
+            console.error(message);
+        }
 
         try {
             initScene();
@@ -117,16 +206,16 @@ function initializeVisualization() {
             window.addEventListener('resize', handleResize);
         } catch (error) {
             console.error('Error in initializeVisualization:', error);
-            showFeedback('Error initializing visualization. Please try again later.', 'error');
-            if (fallbackMessage) {
-                fallbackMessage.textContent = `Error initializing visualization: ${error.message}`;
-                fallbackMessage.style.display = 'block';
-            }
+            showFallbackMessage(`Error initializing visualization: ${error.message}`);
         }
     } else {
         console.error('3D preview canvas not found');
-        showFeedback('Error: 3D preview canvas not found', 'error');
+        showFallbackMessage('Error: 3D preview canvas not found');
     }
 }
 
-// ... [keep the remaining functions] ...
+// Make sure the initializeVisualization function is called when the DOM is loaded
+document.addEventListener('DOMContentLoaded', function() {
+    const fileExtension = document.getElementById('file-extension').dataset.extension;
+    initializeVisualization(fileExtension);
+});

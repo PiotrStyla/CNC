@@ -25,7 +25,7 @@
         <p><strong>Order ID:</strong> {{ order.id }}</p>
         <p><strong>Status:</strong> {{ order.status }}</p>
         <p><strong>Created:</strong> {{ order.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</p>
-        <p><strong>File Type:</strong> {{ file_extension }}</p>
+        <p><strong>File Type:</strong> <span id="file-type">{{ file_extension }}</span></p>
         <p><strong>File Name:</strong> {{ order.technical_drawing }}</p>
     </div>
 </div>
@@ -34,9 +34,13 @@
 {% block extra_js %}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/examples/js/controls/OrbitControls.js"></script>
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const fileExtension = '{{ file_extension }}';
+    const fileTypeElement = document.getElementById('file-type');
+    fileTypeElement.textContent = fileExtension;
+    
     initializeVisualization(fileExtension);
 });
 </script>
