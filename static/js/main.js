@@ -87,7 +87,6 @@ document.addEventListener('DOMContentLoaded', function() {
         console.log('3D preview canvas not found, skipping visualization initialization');
     }
 
-    // Add event listeners for file deletion
     const deleteButtons = document.querySelectorAll('.delete-file');
     deleteButtons.forEach(button => {
         button.addEventListener('click', function(e) {
@@ -163,10 +162,13 @@ function initializeVisualization() {
                 .then(data => {
                     console.log('Model data received:', data);
                     if (data.type === 'image') {
+                        console.log('Displaying 2D image');
                         displayImage(data.filename);
                     } else if (data.vertices && data.faces) {
+                        console.log('Displaying 3D model');
                         display3DModel(data);
                     } else {
+                        console.error('Invalid model data received:', data);
                         throw new Error('Invalid model data received');
                     }
                 })
@@ -298,10 +300,17 @@ function deleteFile(orderId, filename) {
             const fileElement = document.querySelector(`[data-filename="${filename}"]`);
             if (fileElement) {
                 fileElement.remove();
+                console.log('File element removed from DOM');
+            } else {
+                console.warn('File element not found in DOM');
             }
             showFeedback(data.message, 'success');
             if (data.redirect) {
+                console.log('Redirecting to:', data.redirect);
                 window.location.href = data.redirect;
+            } else {
+                console.log('Reloading page to reflect changes');
+                window.location.reload();
             }
         } else {
             console.error('Error deleting file:', data.message);
