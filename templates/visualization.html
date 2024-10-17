@@ -26,6 +26,7 @@
         <p><strong>Status:</strong> {{ order.status }}</p>
         <p><strong>Created:</strong> {{ order.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</p>
         <p><strong>File Type:</strong> {{ file_extension }}</p>
+        <p><strong>File Name:</strong> {{ order.technical_drawing }}</p>
         
         <!-- ... [keep existing order details and forms] ... -->
     </div>
@@ -33,8 +34,6 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/examples/js/controls/OrbitControls.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const fileExtension = '{{ file_extension }}';
@@ -84,7 +83,7 @@ function initializeVisualization(fileExtension) {
             fetch(`/get_model_data/${orderId}`)
                 .then(response => { 
                     console.log('Response status:', response.status);
-                    if (!response.status) {
+                    if (!response.ok) {
                         throw new Error(`HTTP error! status: ${response.status}`);
                     }
                     return response.json(); 
@@ -106,7 +105,7 @@ function initializeVisualization(fileExtension) {
                     console.error('Error loading model:', error);
                     showFeedback('Error loading model. Please try uploading the file again.', 'error');
                     if (fallbackMessage) {
-                        fallbackMessage.textContent = `Error loading model: ${error.message}. File name: ${orderId}`;
+                        fallbackMessage.textContent = `Error loading model: ${error.message}. File name: {{ order.technical_drawing }}`;
                         fallbackMessage.style.display = 'block';
                     }
                 })
@@ -173,7 +172,7 @@ function initializeVisualization(fileExtension) {
                 console.error('Error displaying 3D model:', error);
                 showFeedback('Error displaying 3D model. Please try uploading the file again.', 'error');
                 if (fallbackMessage) {
-                    fallbackMessage.textContent = `Error displaying 3D model: ${error.message}`;
+                    fallbackMessage.textContent = `Error displaying 3D model: ${error.message}. File name: {{ order.technical_drawing }}`;
                     fallbackMessage.style.display = 'block';
                 }
             }
