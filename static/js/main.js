@@ -6,12 +6,37 @@ function initializeVisualization() {
     const imagePreview = document.getElementById('image-preview');
     const loadingIndicator = document.getElementById('loading-indicator');
     const fallbackMessage = document.getElementById('fallback-message');
+    
     if (canvas) {
         console.log('Canvas found, dimensions:', canvas.clientWidth, 'x', canvas.clientHeight);
         let scene, camera, renderer, mesh, controls;
 
         function initScene() {
-            // ... [keep the existing initScene function] ...
+            try {
+                scene = new THREE.Scene();
+                camera = new THREE.PerspectiveCamera(75, canvas.clientWidth / canvas.clientHeight, 0.1, 1000);
+                renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
+                renderer.setSize(canvas.clientWidth, canvas.clientHeight);
+                
+                if (typeof THREE.OrbitControls === 'function') {
+                    controls = new THREE.OrbitControls(camera, renderer.domElement);
+                    controls.enableDamping = true;
+                    controls.dampingFactor = 0.25;
+                    controls.enableZoom = true;
+                } else {
+                    console.error('THREE.OrbitControls is not available');
+                }
+                
+                const ambientLight = new THREE.AmbientLight(0x404040);
+                scene.add(ambientLight);
+                
+                const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
+                directionalLight.position.set(1, 1, 1);
+                scene.add(directionalLight);
+            } catch (error) {
+                console.error('Error initializing scene:', error);
+                showFeedback('Error initializing 3D scene. Please try again later.', 'error');
+            }
         }
 
         function loadModel() {
@@ -85,11 +110,19 @@ function initializeVisualization() {
 
         // ... [keep other existing functions] ...
 
-        initScene();
-        loadModel();
-        animate();
-
-        window.addEventListener('resize', handleResize);
+        try {
+            initScene();
+            loadModel();
+            animate();
+            window.addEventListener('resize', handleResize);
+        } catch (error) {
+            console.error('Error in initializeVisualization:', error);
+            showFeedback('Error initializing visualization. Please try again later.', 'error');
+            if (fallbackMessage) {
+                fallbackMessage.textContent = `Error initializing visualization: ${error.message}`;
+                fallbackMessage.style.display = 'block';
+            }
+        }
     } else {
         console.error('3D preview canvas not found');
         showFeedback('Error: 3D preview canvas not found', 'error');
