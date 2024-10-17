@@ -200,13 +200,26 @@ function initializeVisualization() {
                 imagePreview.style.objectFit = 'contain';
                 imagePreview.style.display = 'block';
                 imagePreview.style.margin = 'auto';
+
+                // Add an onload event listener to check if the image loads successfully
+                imagePreview.onload = function() {
+                    console.log('Image loaded successfully');
+                };
+                imagePreview.onerror = function() {
+                    console.error('Error loading image:', filename);
+                    showFeedback('Error loading image. Please try uploading the file again.', 'error');
+                    if (fallbackMessage) {
+                        fallbackMessage.textContent = `Error loading image: ${filename}`;
+                        fallbackMessage.style.display = 'block';
+                    }
+                };
             }
             if (visualizationContainer) {
                 visualizationContainer.style.display = 'flex';
                 visualizationContainer.style.justifyContent = 'center';
                 visualizationContainer.style.alignItems = 'center';
             }
-            console.log('Image displayed successfully');
+            console.log('Image display process completed');
         }
 
         function display3DModel(data) {
