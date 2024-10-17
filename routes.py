@@ -1,11 +1,12 @@
 import os
 from flask import render_template, request, redirect, url_for, flash, jsonify, send_from_directory
 from werkzeug.utils import secure_filename
-from app import app, db
+from app import app, db, socketio
 from models import User, Order
 from utils import allowed_file, process_cad_file, validate_stl_file, repair_stl_file
 import logging
 from flask_login import login_user, login_required, logout_user, current_user
+from flask_socketio import emit, join_room, leave_room
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -266,3 +267,27 @@ def delete_file(order_id, filename):
 @app.route('/static/<path:filename>')
 def serve_static(filename):
     return send_from_directory(app.static_folder, filename)
+
+@app.route('/chat')
+@login_required
+def chat():
+    return render_template('chat.html')
+
+@socketio.on('join')
+def on_join(data):
+    username = current_user.username
+    room = data['room']
+    join_room(room)
+    emit('status', {'msg': username + ' has entered the room.'}, room=room)
+
+@socketio.on('leave')
+def on_leave(data):
+    username = current_user.username
+    room = data['room']
+    leave_room(room)
+    emit('status', {'msg': username + ' has left the room.'}, room=room)
+
+@socketio.on('message')
+def handle_message(data):
+    room = data['room']
+    emit('message', {'msg': data['msg'], 'username': current_user.username}, room=room)
