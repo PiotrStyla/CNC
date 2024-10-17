@@ -187,10 +187,25 @@ function initializeVisualization() {
 
         function displayImage(filename) {
             console.log('Displaying 2D image:', filename);
-            canvas.style.display = 'none';
-            imagePreview.style.display = 'block';
-            imagePreview.src = `/static/uploads/${filename}`;
-            imagePreview.alt = 'Uploaded Image';
+            const visualizationContainer = document.getElementById('visualization-container');
+
+            if (canvas) canvas.style.display = 'none';
+            if (imagePreview) {
+                imagePreview.style.display = 'block';
+                imagePreview.src = `/static/uploads/${filename}`;
+                imagePreview.alt = 'Uploaded Image';
+                
+                imagePreview.style.maxWidth = '100%';
+                imagePreview.style.maxHeight = '400px';
+                imagePreview.style.objectFit = 'contain';
+                imagePreview.style.display = 'block';
+                imagePreview.style.margin = 'auto';
+            }
+            if (visualizationContainer) {
+                visualizationContainer.style.display = 'flex';
+                visualizationContainer.style.justifyContent = 'center';
+                visualizationContainer.style.alignItems = 'center';
+            }
             console.log('Image displayed successfully');
         }
 
