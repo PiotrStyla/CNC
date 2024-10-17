@@ -162,7 +162,6 @@ def delete_file(order_id, filename):
             logging.info(f"File deleted from file system: {file_path}")
             
             if filename == order.technical_drawing:
-                # Delete the entire order if it's the technical drawing
                 db.session.delete(order)
                 logging.info(f"Deleted order {order_id} as its technical drawing was deleted")
                 db.session.commit()
