@@ -33,7 +33,9 @@ def register():
             flash('Email already exists', 'error')
             return redirect(url_for('register'))
         
-        new_user = User(username=username, email=email)
+        new_user = User()
+        new_user.username = username
+        new_user.email = email
         new_user.set_password(password)
         db.session.add(new_user)
         db.session.commit()
@@ -81,7 +83,7 @@ def upload():
             return redirect(request.url)
         if file and allowed_file(file.filename):
             try:
-                filename = secure_filename(file.filename)
+                filename = secure_filename(file.filename or '')
                 file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
                 os.makedirs(os.path.dirname(file_path), exist_ok=True)
                 file.save(file_path)
@@ -104,7 +106,9 @@ def upload():
                             logging.error(f"STL file validation failed and repair unsuccessful: {validation_result['message']}")
                             return redirect(request.url)
                 
-                order = Order(technical_drawing=filename, user_id=current_user.id)
+                order = Order()
+                order.technical_drawing = filename
+                order.user_id = current_user.id
                 db.session.add(order)
                 db.session.commit()
                 logging.info(f"New order created with ID: {order.id} and filename: {filename}")
@@ -117,7 +121,7 @@ def upload():
                 return redirect(request.url)
         else:
             logging.warning(f"Invalid file type: {file.filename}")
-            flash('Invalid file type. Please upload a supported file format (STL, OBJ, STEP, STP, JPG, JPEG, PNG, GIF).', 'error')
+            flash('Invalid file type. Please upload a supported file format (STL, OBJ, STEP, STP, IGES, IGS, JPG, JPEG, PNG, GIF).', 'error')
     return render_template('upload.html')
 
 @app.route('/visualization/<int:order_id>')
@@ -141,25 +145,13 @@ def get_model_data(order_id):
         file_extension = os.path.splitext(order.technical_drawing)[1].lower()
         logging.info(f"File path: {file_path}, File extension: {file_extension}")
 
-        if file_extension in ['.stl', '.obj', '.step', '.stp']:
-            logging.info(f"Processing 3D file: {order.technical_drawing}")
-            model_data = process_cad_file(order.technical_drawing)
-            if model_data:
-                logging.info(f"3D model data processed for order_id: {order_id}")
-                logging.debug(f"Model data: {model_data}")
-                return jsonify(model_data)
-            else:
-                logging.error(f"Error processing 3D model data for order_id: {order_id}")
-                return jsonify({'error': 'Error processing 3D model data'}), 500
-        elif file_extension in ['.jpg', '.jpeg', '.png', '.gif']:
-            logging.info(f"2D image file detected for order_id: {order_id}")
-            return jsonify({
-                'type': 'image',
-                'filename': order.technical_drawing
-            })
+        model_data = process_cad_file(order.technical_drawing)
+        if 'error' not in model_data:
+            logging.info(f"Model data processed for order_id: {order_id}")
+            return jsonify(model_data)
         else:
-            logging.error(f"Unsupported file type for order_id: {order_id}")
-            return jsonify({'error': 'Unsupported file type'}), 400
+            logging.error(f"Error processing model data for order_id: {order_id}: {model_data['error']}")
+            return jsonify({'error': model_data['error']}), 500
     logging.error(f"Order not found for order_id: {order_id}")
     return jsonify({'error': 'Order not found'}), 404
 
@@ -201,7 +193,7 @@ def upload_additional_file(order_id):
         return redirect(url_for('visualization', order_id=order.id))
     if file and allowed_file(file.filename):
         try:
-            filename = secure_filename(file.filename)
+            filename = secure_filename(file.filename or '')
             file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
             os.makedirs(os.path.dirname(file_path), exist_ok=True)
             file.save(file_path)
@@ -220,7 +212,7 @@ def upload_additional_file(order_id):
         logging.warning(f"Invalid additional file type: {file.filename}")
     return redirect(url_for('visualization', order_id=order.id))
 
-@app.route('/delete_file/<int:order_id>/<filename>', methods=['POST'])
+@app.route('/delete_file/<int:order_id>/<path:filename>', methods=['POST'])
 @login_required
 def delete_file(order_id, filename):
     order = Order.query.get_or_404(order_id)
@@ -266,7 +258,7 @@ def delete_file(order_id, filename):
 
 @app.route('/static/<path:filename>')
 def serve_static(filename):
-    return send_from_directory(app.static_folder, filename)
+    return send_from_directory(app.static_folder or '', filename)
 
 @app.route('/chat')
 @login_required
@@ -278,16 +270,16 @@ def on_join(data):
     username = current_user.username
     room = data['room']
     join_room(room)
-    emit('status', {'msg': username + ' has entered the room.'}, room=room)
+    emit('status', {'msg': username + ' has entered the room.'}, to=room)
 
 @socketio.on('leave')
 def on_leave(data):
     username = current_user.username
     room = data['room']
     leave_room(room)
-    emit('status', {'msg': username + ' has left the room.'}, room=room)
+    emit('status', {'msg': username + ' has left the room.'}, to=room)
 
 @socketio.on('message')
 def handle_message(data):
     room = data['room']
-    emit('message', {'msg': data['msg'], 'username': current_user.username}, room=room)
+    emit('message', {'msg': data['msg'], 'username': current_user.username}, to=room)

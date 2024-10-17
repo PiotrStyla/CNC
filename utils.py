@@ -3,10 +3,15 @@ import numpy as np
 from stl import mesh
 import logging
 import struct
+import cadquery as cq
+from OCP.STEPControl import STEPControl_Reader
+from OCP.IGESControl import IGESControl_Reader
+from OCP.IFSelect import IFSelect_RetDone
+from OCP.gp import gp_Pnt
 
 logging.basicConfig(level=logging.DEBUG)
 
-ALLOWED_EXTENSIONS = {'stl', 'obj', 'step', 'stp', 'jpg', 'jpeg', 'png', 'gif'}
+ALLOWED_EXTENSIONS = {'stl', 'obj', 'step', 'stp', 'iges', 'igs', 'jpg', 'jpeg', 'png', 'gif'}
 
 def allowed_file(filename):
     return '.' in filename and \
@@ -88,48 +93,96 @@ def process_cad_file(filename):
         file_path = os.path.join('static', 'uploads', filename)
         if filename.lower().endswith('.stl'):
             logging.info(f"Processing STL file: {filename}")
-
-            validation_result = validate_stl_file(file_path)
-            if not validation_result['valid']:
-                return {'error': validation_result['message']}
-
-            try:
-                # Load the STL file
-                stl_mesh = mesh.Mesh.from_file(file_path)
-
-                # Calculate the center of the mesh
-                center = np.mean(stl_mesh.vectors.reshape([-1, 3]), axis=0)
-                
-                # Calculate the size of the mesh
-                size = np.max(stl_mesh.vectors.reshape([-1, 3]), axis=0) - np.min(stl_mesh.vectors.reshape([-1, 3]), axis=0)
-                
-                # Prepare data for Three.js
-                vertices = stl_mesh.vectors.reshape([-1, 3]).tolist()
-                faces = np.arange(len(vertices)).reshape([-1, 3]).tolist()
-                
-                logging.info(f"STL file processed successfully: {filename}")
-                return {
-                    'vertices': vertices,
-                    'faces': faces,
-                    'center': center.tolist(),
-                    'size': size.tolist()
-                }
-            except ValueError as ve:
-                logging.error(f"Error loading STL file: {str(ve)}")
-                return {'error': 'Invalid STL file format'}
-            except IOError as ioe:
-                logging.error(f"Error reading STL file: {str(ioe)}")
-                return {'error': 'Unable to read the STL file'}
-        else:
-            logging.info(f"Non-STL file detected: {filename}")
-            # For other file types, we'll just return basic information for now
+            return process_stl_file(file_path)
+        elif filename.lower().endswith(('.step', '.stp')):
+            logging.info(f"Processing STEP file: {filename}")
+            return process_step_file(file_path)
+        elif filename.lower().endswith(('.iges', '.igs')):
+            logging.info(f"Processing IGES file: {filename}")
+            return process_iges_file(file_path)
+        elif filename.lower().endswith(('.jpg', '.jpeg', '.png', '.gif')):
+            logging.info(f"2D image file detected: {filename}")
             return {
-                'filename': filename,
-                'type': filename.rsplit('.', 1)[1].lower()
+                'type': 'image',
+                'filename': filename
             }
+        else:
+            logging.error(f"Unsupported file type: {filename}")
+            return {'error': 'Unsupported file type'}
     except Exception as e:
         logging.error(f"Error processing CAD file: {str(e)}", exc_info=True)
         return {'error': f'An unexpected error occurred: {str(e)}'}
+
+def process_stl_file(file_path):
+    try:
+        stl_mesh = mesh.Mesh.from_file(file_path)
+        vertices = stl_mesh.vectors.reshape([-1, 3]).tolist()
+        faces = np.arange(len(vertices)).reshape([-1, 3]).tolist()
+        center = np.mean(stl_mesh.vectors.reshape([-1, 3]), axis=0)
+        size = np.max(stl_mesh.vectors.reshape([-1, 3]), axis=0) - np.min(stl_mesh.vectors.reshape([-1, 3]), axis=0)
+        
+        return {
+            'vertices': vertices,
+            'faces': faces,
+            'center': center.tolist(),
+            'size': size.tolist()
+        }
+    except Exception as e:
+        logging.error(f"Error processing STL file: {str(e)}")
+        return {'error': f'Error processing STL file: {str(e)}'}
+
+def process_step_file(file_path):
+    try:
+        reader = STEPControl_Reader()
+        status = reader.ReadFile(file_path)
+        
+        if status == IFSelect_RetDone:
+            reader.TransferRoots()
+            shape = reader.Shape()
+            return process_shape(shape)
+        else:
+            logging.error(f"Failed to read STEP file: {file_path}")
+            return {'error': 'Failed to read STEP file'}
+    except Exception as e:
+        logging.error(f"Error processing STEP file: {str(e)}")
+        return {'error': f'Error processing STEP file: {str(e)}'}
+
+def process_iges_file(file_path):
+    try:
+        reader = IGESControl_Reader()
+        status = reader.ReadFile(file_path)
+        
+        if status == IFSelect_RetDone:
+            reader.TransferRoots()
+            shape = reader.Shape()
+            return process_shape(shape)
+        else:
+            logging.error(f"Failed to read IGES file: {file_path}")
+            return {'error': 'Failed to read IGES file'}
+    except Exception as e:
+        logging.error(f"Error processing IGES file: {str(e)}")
+        return {'error': f'Error processing IGES file: {str(e)}'}
+
+def process_shape(shape):
+    try:
+        mesh = cq.Mesh.fromShape(shape)
+        vertices = [(v.X, v.Y, v.Z) for v in mesh.vertices]
+        faces = [tuple(f) for f in mesh.triangles]
+        
+        # Calculate center and size
+        bbox = shape.BoundingBox()
+        center = ((bbox.xmin + bbox.xmax) / 2, (bbox.ymin + bbox.ymax) / 2, (bbox.zmin + bbox.zmax) / 2)
+        size = (bbox.xmax - bbox.xmin, bbox.ymax - bbox.ymin, bbox.zmax - bbox.zmin)
+        
+        return {
+            'vertices': vertices,
+            'faces': faces,
+            'center': center,
+            'size': size
+        }
+    except Exception as e:
+        logging.error(f"Error processing shape: {str(e)}")
+        return {'error': f'Error processing shape: {str(e)}'}
 
 def repair_stl_file(file_path):
     try:
