@@ -216,6 +216,11 @@ function initializeVisualization(fileExtension) {
 
 // Make sure the initializeVisualization function is called when the DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
-    const fileExtension = document.getElementById('file-extension').dataset.extension;
-    initializeVisualization(fileExtension);
+    const fileExtensionElement = document.getElementById('file-type');
+    if (fileExtensionElement) {
+        const fileExtension = fileExtensionElement.textContent.trim();
+        initializeVisualization(fileExtension);
+    } else {
+        console.error('File type element not found');
+    }
 });
