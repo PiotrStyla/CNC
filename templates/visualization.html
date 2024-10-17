@@ -32,6 +32,8 @@
 {% endblock %}
 
 {% block extra_js %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/examples/js/controls/OrbitControls.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const fileExtension = '{{ file_extension }}';
@@ -56,10 +58,14 @@ function initializeVisualization(fileExtension) {
                 renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
                 renderer.setSize(canvas.clientWidth, canvas.clientHeight);
                 
-                controls = new THREE.OrbitControls(camera, renderer.domElement);
-                controls.enableDamping = true;
-                controls.dampingFactor = 0.25;
-                controls.enableZoom = true;
+                if (typeof THREE.OrbitControls === 'function') {
+                    controls = new THREE.OrbitControls(camera, renderer.domElement);
+                    controls.enableDamping = true;
+                    controls.dampingFactor = 0.25;
+                    controls.enableZoom = true;
+                } else {
+                    console.error('THREE.OrbitControls is not available');
+                }
                 
                 const ambientLight = new THREE.AmbientLight(0x404040);
                 scene.add(ambientLight);
@@ -161,8 +167,10 @@ function initializeVisualization(fileExtension) {
                     camera.position.z = cameraZ * 1.5;
                     camera.updateProjectionMatrix();
 
-                    controls.target.copy(center);
-                    controls.update();
+                    if (controls) {
+                        controls.target.copy(center);
+                        controls.update();
+                    }
                     console.log('Camera and controls updated');
 
                     // Display surface type information
