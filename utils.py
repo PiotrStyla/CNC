@@ -150,7 +150,7 @@ def process_iges_file(file_path):
         # Calculate bounding box
         bbox = shape.BoundingBox()
         center = [(bbox.xmin + bbox.xmax) / 2, (bbox.ymin + bbox.ymax) / 2, (bbox.zmin + bbox.zmax) / 2]
-        size = [bbox.xmax - bbox.xmin, bbox.ymax - bbox.ymin, bbox.zmax - bbox.zmin]
+        size = [bbox.xmax - bbox.xmin, bbox.ymax - bbox.ymin, bbox.zmax - bbox.zmax]
         
         # Extract surface types
         surface_types = []

@@ -6,6 +6,7 @@ function initializeVisualization(fileExtension) {
     const imagePreview = document.getElementById('image-preview');
     const loadingIndicator = document.getElementById('loading-indicator');
     const fallbackMessage = document.getElementById('fallback-message');
+    const fileTypeElement = document.getElementById('file-type');
     
     if (canvas) {
         console.log('Canvas found, dimensions:', canvas.clientWidth, 'x', canvas.clientHeight);
@@ -216,11 +217,11 @@ function initializeVisualization(fileExtension) {
 
 // Make sure the initializeVisualization function is called when the DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
-    const fileExtensionElement = document.getElementById('file-type');
-    if (fileExtensionElement) {
-        const fileExtension = fileExtensionElement.textContent.trim();
+    const fileTypeElement = document.getElementById('file-type');
+    if (fileTypeElement) {
+        const fileExtension = fileTypeElement.textContent.trim();
         initializeVisualization(fileExtension);
     } else {
-        console.error('File type element not found');
+        console.log('File type element not found. This may be expected on pages without 3D visualization.');
     }
 });
