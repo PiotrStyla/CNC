@@ -41,7 +41,13 @@ def load_user(user_id):
 
 @app.after_request
 def add_header(response):
-    response.headers['Content-Security-Policy'] = "default-src 'self'; script-src 'self' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net 'unsafe-inline'; style-src 'self' https://cdn.replit.com https://cdn.jsdelivr.net 'unsafe-inline'; img-src 'self' data:; font-src 'self' https://cdn.jsdelivr.net; connect-src 'self' wss:;"
+    csp = "default-src 'self'; " \
+          "script-src 'self' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net 'unsafe-inline'; " \
+          "style-src 'self' https://cdn.replit.com https://cdn.jsdelivr.net https://fonts.googleapis.com 'unsafe-inline'; " \
+          "img-src 'self' data:; " \
+          "font-src 'self' https://cdn.jsdelivr.net https://fonts.gstatic.com; " \
+          "connect-src 'self' wss:;"
+    response.headers['Content-Security-Policy'] = csp
     return response
 
 from routes import *

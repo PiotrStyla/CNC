@@ -173,5 +173,3 @@ def process_iges_file(file_path):
     except Exception as e:
         logging.exception(f"Error processing IGES file: {file_path}")
         return {'error': f'Error processing IGES file: {str(e)}'}
-
-# ... [keep other existing functions] ...
