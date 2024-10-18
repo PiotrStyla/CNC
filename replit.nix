@@ -10,5 +10,6 @@
     pkgs.imagemagick
     pkgs.openssl
     pkgs.postgresql
+    pkgs.git 
   ];
 }
